@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import {
   CalendarDays,
   User,
@@ -193,9 +194,11 @@ export default function MyBodyPage() {
               <h2 className="text-xl font-semibold mb-4">Your Dosha Profile</h2>
               <div className="flex items-start gap-4">
                 <div className="w-16 h-16 flex-shrink-0">
-                  <img
+                  <Image
                     src="/images/dosha.svg" // replace with the actual path to your icon
                     alt="Dosha Icon"
+                    width={64}
+                    height={64}
                     className="w-full h-full object-contain"
                   />
                 </div>

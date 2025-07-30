@@ -34,25 +34,25 @@ type UserProfile = {
   role: string;
   expertise: string[];
   qualification: Qualification[];
-  additional_courses: any[];
-  focusarea: any[];
-  goal: any[];
-  health_issues: any[];
-  achievements: any[];
-  assessments: any[];
+  additional_courses: string[];
+  focusarea: string[];
+  goal: string[];
+  health_issues: string[];
+  achievements: string[];
+  assessments: string[];
   status: boolean;
   active: boolean;
   profileImage: string;
   AboutMe: string;
   notificationToken: string;
-  favoriteClasses: any[];
-  favoriteEvents: any[];
-  favoriteTeachers: any[];
+  favoriteClasses: string[];
+  favoriteEvents: string[];
+  favoriteTeachers: string[];
   email: string;
   name: string;
   teacherCategory: string;
-  attendance: any[];
-  classFeedback: any[];
+  attendance: string[];
+  classFeedback: string[];
   images: UserImage[];
   id: string;
 };
@@ -170,7 +170,7 @@ export default function InstructorProfile() {
   }, [activeModal, profile]);
 
   // Updated API update function with react-hot-toast
-  const updateProfile = async (updateData: any) => {
+  const updateProfile = async (updateData: Partial<UserProfile>) => {
     const token = Cookies.get("accessToken");
     if (!token) {
       toast.error("Authentication token not found. Please login again.");
@@ -218,7 +218,7 @@ export default function InstructorProfile() {
 
           toast.success("Profile updated successfully!");
           return true;
-        } catch (jsonError) {
+        } catch {
           // If JSON parsing fails but response was ok, still consider it success
           console.log("JSON parsing failed but response was successful");
           setProfile((prev) => (prev ? { ...prev, ...updateData } : null));
@@ -427,7 +427,7 @@ export default function InstructorProfile() {
       toast.success("Image uploaded successfully!");
       setSelectedFile(null);
       closeModal();
-    } catch (err) {
+    } catch {
       toast.dismiss();
       toast.error("Network error during upload");
     } finally {

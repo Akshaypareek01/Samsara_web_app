@@ -1,15 +1,16 @@
 import React from "react";
+import Image from "next/image";
 import { Users, UserCheck, Calendar, Clock, Star } from "lucide-react";
 
 const TeachingDashboard = () => {
   // Sample data for the line chart
-  const chartData = [
-    { week: "Week 1", value: 120 },
-    { week: "Week 2", value: 125 },
-    { week: "Week 3", value: 130 },
-    { week: "Week 4", value: 115 },
-    { week: "Week 5", value: 110 },
-  ];
+  // const chartData = [
+  //   { week: "Week 1", value: 120 },
+  //   { week: "Week 2", value: 125 },
+  //   { week: "Week 3", value: 130 },
+  //   { week: "Week 4", value: 115 },
+  //   { week: "Week 5", value: 110 },
+  // ];
 
   // Student data
   const students = [
@@ -48,21 +49,21 @@ const TeachingDashboard = () => {
   ];
 
   // Create SVG path for the line chart
-  const createPath = () => {
-    const width = 400;
-    const height = 150;
-    const maxValue = Math.max(...chartData.map((d) => d.value));
-    const minValue = Math.min(...chartData.map((d) => d.value));
-    const range = maxValue - minValue;
+  // const createPath = () => {
+  //   const width = 400;
+  //   const height = 150;
+  //   const maxValue = Math.max(...chartData.map((d) => d.value));
+  //   const minValue = Math.min(...chartData.map((d) => d.value));
+  //   const range = maxValue - minValue;
 
-    const points = chartData.map((d, i) => {
-      const x = (i / (chartData.length - 1)) * width;
-      const y = height - ((d.value - minValue) / range) * height;
-      return `${x},${y}`;
-    });
+  //   const points = chartData.map((d, i) => {
+  //     const x = (i / (chartData.length - 1)) * width;
+  //     const y = height - ((d.value - minValue) / range) * height;
+  //     return `${x},${y}`;
+  //   });
 
-    return `M ${points.join(" L ")}`;
-  };
+  //   return `M ${points.join(" L ")}`;
+  // };
 
   return (
     <div className="p-6 bg-gray-50 min-h-screen">
@@ -323,9 +324,11 @@ const TeachingDashboard = () => {
             {students.map((student, index) => (
               <div key={index} className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <img
+                  <Image
                     src={student.avatar}
                     alt={student.name}
+                    width={40}
+                    height={40}
                     className="w-10 h-10 rounded-full object-cover"
                   />
                   <div>
