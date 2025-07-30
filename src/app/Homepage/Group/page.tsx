@@ -2,9 +2,48 @@
 
 import Image from "next/image";
 import { Clock, DollarSign, Users } from "lucide-react";
-import { useRouter } from "next/navigation";
-export default function EventsPage() {
-  const router = useRouter();
+import { useEffect, useState } from "react";
+import { BASE_URL } from "@/lib/utils";
+
+interface ClassType {
+  _id?: string;
+  image?: string;
+  title?: string;
+  teacher?: { name?: string; profileImage?: string };
+  schedule?: string;
+  type?: string;
+  status?: string;
+  availableseats?: number;
+}
+
+export default function ClassesPage() {
+  // const router = useRouter(); // removed unused router
+  const [classes, setClasses] = useState<ClassType[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    const fetchClasses = async () => {
+      setLoading(true);
+      setError("");
+      try {
+        const res = await fetch(`${BASE_URL}/classes`);
+        const data = await res.json();
+        let classArray = data;
+        if (data && typeof data === "object" && !Array.isArray(data)) {
+          if (Array.isArray(data.data)) classArray = data.data;
+          else if (Array.isArray(data.classes)) classArray = data.classes;
+          else classArray = [];
+        }
+        setClasses(classArray);
+      } catch {
+        setError("Failed to fetch classes");
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchClasses();
+  }, []);
   return (
     <div className="flex justify-center items-center py-10 px-4">
       <div className="bg-white rounded-xl shadow-md p-6 w-full max-w-6xl space-y-8">
@@ -12,7 +51,7 @@ export default function EventsPage() {
         <div className="relative w-full h-[220px] rounded-lg overflow-hidden">
           <Image
             src="/images/peoples.svg"
-            alt="Upcoming Events"
+            alt="Upcoming Classes"
             layout="fill"
             objectFit="cover"
             className="brightness-[0.6] rounded-lg"
@@ -24,7 +63,7 @@ export default function EventsPage() {
             </div>
           </div>
           <div className="absolute top-4 right-4 bg-orange-500 text-white text-sm px-3 py-1 rounded-full shadow-md">
-            15+ Events Today
+            15+ Classes Today
           </div>
         </div>
 
@@ -41,97 +80,106 @@ export default function EventsPage() {
           </button>
         </div>
 
-        {/* Online Events Header */}
+        {/* Online Classes Header */}
         <div className="flex justify-between items-center">
-          <h3 className="text-lg font-semibold">Online Events</h3>
+          <h3 className="text-lg font-semibold">Online Classes</h3>
           <button className="text-orange-500 text-sm font-medium">
             See All
           </button>
         </div>
 
-        {/* Event Cards */}
+        {/* Class Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {[1, 2, 3].map((item, i) => (
-            <div
-              key={i}
-              className="rounded-xl border border-gray-200 overflow-hidden shadow-sm bg-white"
-            >
-              {/* Card Image */}
-              <div className="relative h-[150px] w-full">
-                <Image
-                  src="/images/class1.svg"
-                  alt="Event Thumbnail"
-                  layout="fill"
-                  objectFit="cover"
-                  className="rounded-t-xl"
-                />
-                {i === 0 && (
-                  <div className="absolute top-2 right-2 bg-red-500 text-white text-xs px-2 py-0.5 rounded-full">
-                    Live
-                  </div>
-                )}
-              </div>
-
-              {/* Card Body */}
-              <div className="p-4 space-y-2">
-                <h4 className="text-sm font-semibold">
-                  {i === 0 ? "Virtual Thyroid Yoga" : "Mindfulness Meditation"}
-                </h4>
-
-                {/* Instructor */}
-                <div className="flex items-center gap-2 text-xs text-gray-600">
-                  <Image
-                    src={`https://images.unsplash.com/photo-1502685104226-ee32379fefbe?auto=format&fit=facearea&facepad=3&w=64&h=64&q=80`}
-                    width={24}
-                    height={24}
-                    alt="Instructor"
-                    className="rounded-full object-cover"
-                  />
-                  <span>with {i === 0 ? "Maya Patel" : "James Wilson"}</span>
-                </div>
-
-                {/* Details */}
-                <div className="flex items-center gap-3 text-xs text-gray-500">
-                  <div className="flex items-center gap-1">
-                    <Clock size={14} />
-                    {i === 0 ? "Tomorrow, 10 AM" : "Today, 6 PM"}
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <DollarSign size={14} />
-                    {i === 0 ? "Free" : "$15"}
-                  </div>
-                </div>
-
-                {/* Bottom Row */}
-                <div className="flex justify-between items-center text-xs">
-                  <div className="flex items-center text-gray-400 gap-1">
-                    <Users size={14} />
-                    {i === 0 ? "12 spots left" : "5 spots left"}
-                  </div>
-                  <button
-                    className="bg-orange-500 text-white text-xs px-3 py-1 rounded-md hover:bg-orange-600 cursor-pointer"
-                    onClick={() => router.push("/Homepage/Group/Details")}
-                  >
-                    Book
-                  </button>
-                </div>
-              </div>
+          {loading ? (
+            <div className="col-span-3 text-center py-8">
+              Loading classes...
             </div>
-          ))}
+          ) : error ? (
+            <div className="col-span-3 text-center text-red-500 py-8">
+              {error}
+            </div>
+          ) : classes.length === 0 ? (
+            <div className="col-span-3 text-center py-8">
+              No classes scheduled.
+            </div>
+          ) : (
+            classes.map((item, i) => (
+              <div
+                key={item._id || i}
+                className="rounded-xl border border-gray-200 overflow-hidden shadow-sm bg-white"
+              >
+                {/* Card Image */}
+                <div className="relative h-[150px] w-full">
+                  <Image
+                    src={item.image || "/images/class1.svg"}
+                    alt={item.title || "Class Thumbnail"}
+                    layout="fill"
+                    objectFit="cover"
+                    className="rounded-t-xl"
+                  />
+                  {item.status === "live" && (
+                    <div className="absolute top-2 right-2 bg-red-500 text-white text-xs px-2 py-0.5 rounded-full">
+                      Live
+                    </div>
+                  )}
+                </div>
+                {/* Card Body */}
+                <div className="p-4 space-y-2">
+                  <h4 className="text-sm font-semibold">
+                    {item.title || "Untitled Class"}
+                  </h4>
+                  {/* Instructor */}
+                  <div className="flex items-center gap-2 text-xs text-gray-600">
+                    <Image
+                      src={item.teacher?.profileImage || "/images/logo.svg"}
+                      width={24}
+                      height={24}
+                      alt={item.teacher?.name || "Instructor"}
+                      className="rounded-full object-cover"
+                    />
+                    <span>with {item.teacher?.name || "Unknown"}</span>
+                  </div>
+                  {/* Details */}
+                  <div className="flex items-center gap-3 text-xs text-gray-500">
+                    <div className="flex items-center gap-1">
+                      <Clock size={14} />
+                      {item.schedule
+                        ? new Date(item.schedule).toLocaleString()
+                        : "No schedule"}
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <DollarSign size={14} />
+                      {item.type === "free" ? "Free" : "Paid"}
+                    </div>
+                  </div>
+                  {/* Bottom Row */}
+                  <div className="flex justify-between items-center text-xs">
+                    <div className="flex items-center text-gray-400 gap-1">
+                      <Users size={14} />
+                      {item.availableseats || 0} spots left
+                    </div>
+                    <button className="bg-orange-500 text-white text-xs px-3 py-1 rounded-md hover:bg-orange-600 cursor-pointer">
+                      Join
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
         </div>
 
-        {/* Event Cards */}
+        {/* My Classes Section */}
 
         <div className="bg-white rounded-xl p-6 shadow-sm space-y-4">
           {/* Header */}
           <div className="flex justify-between items-center">
-            <h3 className="text-md font-semibold">My Events</h3>
+            <h3 className="text-md font-semibold">My Classes</h3>
             <button className="text-sm text-orange-500 font-medium">
               See All
             </button>
           </div>
 
-          {/* Event List */}
+          {/* Class List */}
           {[
             {
               title: "Morning Flow",
@@ -147,7 +195,7 @@ export default function EventsPage() {
               enrolled: 18,
               img: "https://images.unsplash.com/photo-1502685104226-ee32379fefbe?auto=format&fit=facearea&facepad=3&w=64&h=64&q=80",
             },
-          ].map((event, index) => (
+          ].map((classItem, index) => (
             <div
               key={index}
               className="flex justify-between items-center bg-gray-50 rounded-lg px-4 py-3"
@@ -155,18 +203,18 @@ export default function EventsPage() {
               {/* Left Side */}
               <div className="flex gap-3 items-center">
                 <Image
-                  src={event.img}
-                  alt={event.title}
+                  src={classItem.img}
+                  alt={classItem.title}
                   width={48}
                   height={48}
                   className="rounded-lg object-cover"
                 />
                 <div>
-                  <h4 className="text-sm font-medium">{event.title}</h4>
-                  <p className="text-xs text-gray-500">{event.time}</p>
+                  <h4 className="text-sm font-medium">{classItem.title}</h4>
+                  <p className="text-xs text-gray-500">{classItem.time}</p>
                   <div className="flex items-center gap-4 text-xs text-gray-400 mt-1">
-                    <span>📍 {event.location}</span>
-                    <span>👥 {event.enrolled} Enrolled</span>
+                    <span>📍 {classItem.location}</span>
+                    <span>👥 {classItem.enrolled} Enrolled</span>
                   </div>
                 </div>
               </div>

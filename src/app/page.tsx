@@ -6,11 +6,17 @@ import { MailIcon, UserIcon } from "lucide-react";
 import Lottie from "lottie-react";
 import successAnimation from "./sucess.json";
 import { useRouter } from "next/navigation";
+import toast, { Toaster } from "react-hot-toast";
+import Cookies from "js-cookie";
+import { BASE_URL } from "@/lib/utils";
 
 export default function Home() {
   const [role, setRole] = useState("Student");
   const [step, setStep] = useState("signin");
   const [verificationCode, setVerificationCode] = useState(Array(4).fill(""));
+  const [email, setEmail] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
   const [, setCircleSize] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
   const router = useRouter(); // ✅ Add router hook here
@@ -22,14 +28,89 @@ export default function Home() {
     }
   }, [step]);
 
-  const handleSignIn = () => setStep("verification");
+  const handleSignIn = async () => {
+    setError("");
+    if (!email) {
+      setError("Please enter your email.");
+      toast.error("Please enter your email.");
+      return;
+    }
+    setLoading(true);
+    try {
+      const res = await fetch(`${BASE_URL}/auth/send-login-otp`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        setError(data.message || "Failed to send OTP.");
+        toast.error(data.message || "Failed to send OTP");
+        setLoading(false);
+        return;
+      }
+      setStep("verification");
+      toast.success("OTP sent successfully");
+    } catch {
+      setError("Network error. Please try again.");
+      toast.error("Network error");
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  const handleVerify = () => {
-    setStep("success");
-    setTimeout(() => {
-      console.log("Redirecting to dashboard...");
-      router.push("/Homepage");
-    }, 3000);
+  const handleVerify = async () => {
+    setError("");
+    const otp = verificationCode.join("");
+    if (otp.length !== 4) {
+      setError("Please enter the 4-digit OTP.");
+      toast.error("Please enter the 4-digit OTP");
+      return;
+    }
+    setLoading(true);
+    try {
+      const res = await fetch(`${BASE_URL}/auth/verify-login-otp`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, otp }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        setError(data.message || "Invalid OTP.");
+        toast.error(data.message || "OTP is invalid");
+        setLoading(false);
+        return;
+      }
+      const data = await res.json();
+      console.log("OTP verify response:", data);
+      // Store access token in cookies
+      if (data.tokens && data.tokens.access && data.tokens.access.token) {
+        Cookies.set("accessToken", data.tokens.access.token, {
+          expires: data.tokens.access.expires
+            ? new Date(data.tokens.access.expires)
+            : 7, // fallback 7 days
+        });
+      }
+      // Store user details in cookies
+      if (data.user) {
+        Cookies.set("user", JSON.stringify(data.user), {
+          expires:
+            data.tokens && data.tokens.access && data.tokens.access.expires
+              ? new Date(data.tokens.access.expires)
+              : 7,
+        });
+      }
+      setStep("success");
+      toast.success("OTP verified successfully");
+      setTimeout(() => {
+        router.push("/Homepage");
+      }, 3000);
+    } catch {
+      setError("Network error. Please try again.");
+      toast.error("Network error");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleCodeChange = (index: number, value: string) => {
@@ -53,6 +134,7 @@ export default function Home() {
 
   return (
     <div className="auth-container">
+      <Toaster position="top-right" />
       {/* Left Side - Welcome - Fixed Position */}
       <div className="left-side">
         <Image
@@ -145,11 +227,20 @@ export default function Home() {
                   type="email"
                   placeholder="Enter Email ID"
                   className="email-field"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  disabled={loading}
                 />
               </div>
-
-              <button onClick={handleSignIn} className="signin-button">
-                Sign In
+              {error && (
+                <div style={{ color: "red", marginBottom: 8 }}>{error}</div>
+              )}
+              <button
+                onClick={handleSignIn}
+                className="signin-button"
+                disabled={loading}
+              >
+                {loading ? "Sending..." : "Sign In"}
               </button>
             </>
           )}
@@ -176,13 +267,16 @@ export default function Home() {
                   />
                 ))}
               </div>
-
+              {error && (
+                <div style={{ color: "red", marginBottom: 8 }}>{error}</div>
+              )}
               <button
                 onClick={handleVerify}
                 className="verify-button"
                 style={{ position: "relative", bottom: "25px" }}
+                disabled={loading}
               >
-                Continue
+                {loading ? "Verifying..." : "Continue"}
               </button>
             </div>
           )}
