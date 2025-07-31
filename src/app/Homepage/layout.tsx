@@ -117,9 +117,9 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         <nav className="mt-10 space-y-3 text-gray-700 text-sm">
           <MenuItem
             icon={<CalendarDays size={18} />}
-            label="Dashboard"
-            isActive={pathname === "/Homepage"}
-            onClick={() => router.push("/Homepage")}
+            label="Profile"
+            isActive={pathname === "/Homepage/Profile"}
+            onClick={() => router.push("/Homepage/Profile")}
           />
 
           {/* Conditionally show Profile section only for teachers */}

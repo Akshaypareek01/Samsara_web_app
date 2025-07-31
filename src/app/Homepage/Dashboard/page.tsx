@@ -1,40 +1,21 @@
 import React from "react";
-import {
-  Calendar,
-  MessageCircle,
-  Users,
-  BookOpen,
-  Clock,
-  User,
-} from "lucide-react";
+import { Users, MessageCircle, User } from "lucide-react";
 
-export default function Dashboard() {
+export default function ExactDashboard() {
   return (
-    <div className="min-h-screen bg-white p-8">
-      <div className="max-w-6xl mx-auto">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-800 mb-2">
-            Learning Dashboard
-          </h1>
-          <p className="text-gray-600">
-            Track your progress and manage your sessions
-          </p>
-        </div>
-
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+    <div className="min-h-screen bg-gray-50 p-6">
+      <div className="max-w-4xl mx-auto">
+        {/* Top Cards Row */}
+        <div className="grid grid-cols-3 gap-6 mb-8">
           {/* Profile Card */}
-          <div className="bg-white rounded-xl shadow-lg p-6 border-l-4 border-purple-500">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center space-x-3">
-                <div className="p-2 bg-purple-100 rounded-lg">
-                  <User className="w-6 h-6 text-purple-600" />
-                </div>
-                <div>
-                  <h3 className="font-semibold text-gray-800">Profile</h3>
-                  <p className="text-sm text-gray-500">80% complete</p>
-                </div>
+          <div className="bg-white rounded-lg p-4 shadow-sm border">
+            <div className="flex items-center space-x-3 mb-3">
+              <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center">
+                <User className="w-5 h-5 text-purple-600" />
+              </div>
+              <div>
+                <h3 className="text-sm font-medium text-gray-900">Profile</h3>
+                <p className="text-xs text-purple-600">80% complete</p>
               </div>
             </div>
             <div className="w-full bg-gray-200 rounded-full h-2">
@@ -45,221 +26,96 @@ export default function Dashboard() {
             </div>
           </div>
 
-          {/* Schedule Card */}
-          <div className="bg-white rounded-xl shadow-lg p-6 border-l-4 border-blue-500">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center space-x-3">
-                <div className="p-2 bg-blue-100 rounded-lg">
-                  <Calendar className="w-6 h-6 text-blue-600" />
-                </div>
-                <div>
-                  <h3 className="font-semibold text-gray-800">Schedule</h3>
-                  <p className="text-sm text-gray-500">3 upcoming classes</p>
-                </div>
+          {/* Community Card */}
+          <div className="bg-white rounded-lg p-4 shadow-sm border">
+            <div className="flex items-center space-x-3 mb-3">
+              <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center">
+                <Users className="w-5 h-5 text-purple-600" />
+              </div>
+              <div>
+                <h3 className="text-sm font-medium text-gray-900">Community</h3>
+                <p className="text-xs text-purple-600">125 members</p>
               </div>
             </div>
-            <div className="text-sm text-blue-600 font-medium">
-              Today: 2:00 PM
+            <div className="bg-purple-50 px-2 py-1 rounded text-xs text-purple-600 inline-block">
+              2 new posts today
             </div>
           </div>
 
           {/* Chat Card */}
-          <div className="bg-white rounded-xl shadow-lg p-6 border-l-4 border-green-500">
-            <div className="flex items-center justify-between mb-4">
+          <div className="bg-white rounded-lg p-4 shadow-sm border">
+            <div className="flex items-center justify-between">
               <div className="flex items-center space-x-3">
-                <div className="p-2 bg-green-100 rounded-lg">
-                  <MessageCircle className="w-6 h-6 text-green-600" />
+                <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+                  <MessageCircle className="w-5 h-5 text-green-600" />
                 </div>
                 <div>
-                  <h3 className="font-semibold text-gray-800">Chat</h3>
-                  <p className="text-sm text-gray-500">5 unread messages</p>
+                  <h3 className="text-sm font-medium text-gray-900">Chat</h3>
+                  <p className="text-xs text-green-600">5 unread messages</p>
                 </div>
               </div>
               <div className="flex items-center space-x-1">
                 <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                <span className="text-xs text-green-600 font-medium">
-                  Online
-                </span>
+                <span className="text-xs text-green-600">Online</span>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Main Content Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Left Column - Community & Class Tracker */}
-          <div className="space-y-6">
-            {/* Community Card */}
-            <div className="bg-white rounded-xl shadow-lg p-6">
-              <div className="flex items-center space-x-3 mb-4">
-                <div className="p-2 bg-pink-100 rounded-lg">
-                  <Users className="w-6 h-6 text-pink-600" />
-                </div>
+        {/* Upcoming Sessions Section */}
+        <div className="bg-white rounded-lg shadow-sm border">
+          <div className="p-6">
+            <h2 className="text-lg font-medium text-gray-900 mb-6">
+              Upcoming Sessions
+            </h2>
+
+            <div className="space-y-2">
+              {/* Monday Session */}
+              <div className="flex items-center justify-between py-2">
                 <div>
-                  <h3 className="font-semibold text-gray-800">Community</h3>
-                  <p className="text-sm text-gray-500">125 members</p>
+                  <h3 className="font-medium text-gray-900">Monday, June 23</h3>
+                  <p className="text-sm text-gray-500">7:00 AM - 8:00 AM</p>
                 </div>
-              </div>
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">New posts today</span>
-                  <span className="bg-pink-100 text-pink-800 text-xs px-2 py-1 rounded-full">
-                    3
+                <div className="flex items-center space-x-4">
+                  <span className="bg-green-100 text-green-800 text-xs px-3 py-1 rounded-full font-medium">
+                    3 spots left
                   </span>
-                </div>
-                <div className="text-sm text-pink-600 font-medium">
-                  View all posts →
-                </div>
-              </div>
-            </div>
-
-            {/* Class Tracker Card */}
-            <div className="bg-white rounded-xl shadow-lg p-6">
-              <div className="flex items-center space-x-3 mb-4">
-                <div className="p-2 bg-orange-100 rounded-lg">
-                  <BookOpen className="w-6 h-6 text-orange-600" />
-                </div>
-                <div>
-                  <h3 className="font-semibold text-gray-800">Class Tracker</h3>
-                  <p className="text-sm text-gray-500">4 courses in progress</p>
-                </div>
-              </div>
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">
-                    Overall progress
-                  </span>
-                  <span className="text-sm font-medium text-orange-600">
-                    74%
-                  </span>
-                </div>
-                <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div
-                    className="bg-orange-500 h-2 rounded-full"
-                    style={{ width: "74%" }}
-                  ></div>
-                </div>
-              </div>
-            </div>
-
-            {/* Availability Card */}
-            <div className="bg-white rounded-xl shadow-lg p-6">
-              <div className="flex items-center space-x-3 mb-4">
-                <div className="p-2 bg-teal-100 rounded-lg">
-                  <Clock className="w-6 h-6 text-teal-600" />
-                </div>
-                <div>
-                  <h3 className="font-semibold text-gray-800">Availability</h3>
-                  <p className="text-sm text-gray-500">Set your schedule</p>
-                </div>
-              </div>
-              <div className="flex items-center space-x-2">
-                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                <span className="text-sm text-green-600 font-medium">
-                  Available now
-                </span>
-              </div>
-            </div>
-          </div>
-
-          {/* Right Column - Upcoming Sessions */}
-          <div className="lg:col-span-2">
-            <div className="bg-white rounded-xl shadow-lg p-6">
-              <h3 className="text-xl font-semibold text-gray-800 mb-6">
-                Upcoming Sessions
-              </h3>
-
-              <div className="space-y-4">
-                {/* Monday Session */}
-                <div className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h4 className="font-medium text-gray-800">
-                        Monday, June 23
-                      </h4>
-                      <p className="text-sm text-gray-500">7:00 AM - 8:00 AM</p>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <span className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full">
-                        3 spots left
-                      </span>
-                      <button className="text-gray-400 hover:text-gray-600">
-                        <svg
-                          className="w-4 h-4"
-                          fill="currentColor"
-                          viewBox="0 0 20 20"
-                        >
-                          <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
-                        </svg>
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Wednesday Session */}
-                <div className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h4 className="font-medium text-gray-800">
-                        Wednesday, June 25
-                      </h4>
-                      <p className="text-sm text-gray-500">7:00 AM - 8:00 AM</p>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <span className="bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded-full">
-                        1 spot left
-                      </span>
-                      <button className="text-gray-400 hover:text-gray-600">
-                        <svg
-                          className="w-4 h-4"
-                          fill="currentColor"
-                          viewBox="0 0 20 20"
-                        >
-                          <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
-                        </svg>
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Friday Session */}
-                <div className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h4 className="font-medium text-gray-800">
-                        Friday, June 27
-                      </h4>
-                      <p className="text-sm text-gray-500">7:00 AM - 8:00 AM</p>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <span className="bg-red-100 text-red-800 text-xs px-2 py-1 rounded-full">
-                        Full
-                      </span>
-                      <button className="text-gray-400 hover:text-gray-600">
-                        <svg
-                          className="w-4 h-4"
-                          fill="currentColor"
-                          viewBox="0 0 20 20"
-                        >
-                          <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
-                        </svg>
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Quick Actions */}
-              <div className="mt-6 pt-6 border-t border-gray-200">
-                <div className="flex flex-wrap gap-3">
-                  <button className="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors">
-                    Schedule Session
+                  <button className="bg-orange-400 hover:bg-orange-500 text-white px-4 py-2 rounded text-sm font-medium">
+                    Join Now
                   </button>
-                  <button className="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200 transition-colors">
-                    View Calendar
+                </div>
+              </div>
+
+              {/* Wednesday Session */}
+              <div className="flex items-center justify-between py-2">
+                <div>
+                  <h3 className="font-medium text-gray-900">
+                    Wednesday, June 25
+                  </h3>
+                  <p className="text-sm text-gray-500">7:00 AM - 8:00 AM</p>
+                </div>
+                <div className="flex items-center space-x-4">
+                  <span className="bg-yellow-100 text-yellow-800 text-xs px-3 py-1 rounded-full font-medium">
+                    1 spot left
+                  </span>
+                  <button className="bg-orange-400 hover:bg-orange-500 text-white px-4 py-2 rounded text-sm font-medium">
+                    Join Now
                   </button>
-                  <button className="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200 transition-colors">
-                    Join Community
+                </div>
+              </div>
+
+              {/* Friday Session */}
+              <div className="flex items-center justify-between py-2">
+                <div>
+                  <h3 className="font-medium text-gray-900">Friday, June 27</h3>
+                  <p className="text-sm text-gray-500">7:00 AM - 8:00 AM</p>
+                </div>
+                <div className="flex items-center space-x-4">
+                  <span className="bg-red-100 text-red-800 text-xs px-3 py-1 rounded-full font-medium">
+                    Full
+                  </span>
+                  <button className="bg-orange-400 hover:bg-orange-500 text-white px-4 py-2 rounded text-sm font-medium">
+                    Join Now
                   </button>
                 </div>
               </div>
