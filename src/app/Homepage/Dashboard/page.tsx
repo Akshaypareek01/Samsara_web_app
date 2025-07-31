@@ -1,14 +1,25 @@
+"use client";
 import React from "react";
 import { Users, MessageCircle, User } from "lucide-react";
 
 export default function ExactDashboard() {
+  const handleNavigation = (path) => {
+    // In a real app, you would use React Router or Next.js router
+    console.log(`Navigating to: ${path}`);
+    // For demonstration, you can replace this with actual navigation logic
+    window.location.href = path;
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-4xl mx-auto">
         {/* Top Cards Row */}
         <div className="grid grid-cols-3 gap-6 mb-8">
           {/* Profile Card */}
-          <div className="bg-white rounded-lg p-4 shadow-sm border">
+          <div
+            className="bg-white rounded-lg p-4 shadow-sm cursor-pointer hover:shadow-md transition-shadow duration-200"
+            onClick={() => handleNavigation("/Homepage/Profile")}
+          >
             <div className="flex items-center space-x-3 mb-3">
               <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center">
                 <User className="w-5 h-5 text-purple-600" />
@@ -27,7 +38,10 @@ export default function ExactDashboard() {
           </div>
 
           {/* Community Card */}
-          <div className="bg-white rounded-lg p-4 shadow-sm border">
+          <div
+            className="bg-white rounded-lg p-4 shadow-sm cursor-pointer hover:shadow-md transition-shadow duration-200"
+            onClick={() => handleNavigation("/Homepage/Dashboard/Community")}
+          >
             <div className="flex items-center space-x-3 mb-3">
               <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center">
                 <Users className="w-5 h-5 text-purple-600" />
@@ -43,7 +57,10 @@ export default function ExactDashboard() {
           </div>
 
           {/* Chat Card */}
-          <div className="bg-white rounded-lg p-4 shadow-sm border">
+          <div
+            className="bg-white rounded-lg p-4 shadow-sm cursor-pointer hover:shadow-md transition-shadow duration-200"
+            onClick={() => handleNavigation("/Homepage/Dashboard/Chat")}
+          >
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-3">
                 <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
@@ -63,7 +80,7 @@ export default function ExactDashboard() {
         </div>
 
         {/* Upcoming Sessions Section */}
-        <div className="bg-white rounded-lg shadow-sm border">
+        <div className="bg-white rounded-lg shadow-sm">
           <div className="p-6">
             <h2 className="text-lg font-medium text-gray-900 mb-6">
               Upcoming Sessions
