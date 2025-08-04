@@ -3,7 +3,6 @@
 import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import {
-  CalendarDays,
   User,
   BookOpen,
   Calendar,
@@ -120,8 +119,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             <MenuItem
               icon={<User size={18} />}
               label="Profile"
-              isActive={pathname === "/Homepage/Profile"}
-              onClick={() => router.push("/Homepage/Profile")}
+              isActive={pathname === "/Homepage/Dashboard/UserProfile"}
+              onClick={() => router.push("/Homepage/Dashboard/UserProfile")}
             />
           )}
 

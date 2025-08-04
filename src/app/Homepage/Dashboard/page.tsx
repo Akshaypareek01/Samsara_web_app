@@ -3,7 +3,7 @@ import React from "react";
 import { Users, MessageCircle, User } from "lucide-react";
 
 export default function ExactDashboard() {
-  const handleNavigation = (path) => {
+  const handleNavigation = (path: string) => {
     // In a real app, you would use React Router or Next.js router
     console.log(`Navigating to: ${path}`);
     // For demonstration, you can replace this with actual navigation logic
@@ -18,7 +18,7 @@ export default function ExactDashboard() {
           {/* Profile Card */}
           <div
             className="bg-white rounded-lg p-4 shadow-sm cursor-pointer hover:shadow-md transition-shadow duration-200"
-            onClick={() => handleNavigation("/Homepage/Profile")}
+            onClick={() => handleNavigation("/Homepage/Dashboard/UserProfile")}
           >
             <div className="flex items-center space-x-3 mb-3">
               <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center">
