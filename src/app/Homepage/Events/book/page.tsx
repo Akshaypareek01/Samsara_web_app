@@ -12,19 +12,298 @@ import {
   UserPlus,
   Users,
   Wifi,
+  GraduationCap,
+  Star,
 } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { useSearchParams } from "next/navigation";
+import { useEffect, useState } from "react";
+import { BASE_URL } from "@/lib/utils";
+import { getCookie } from "cookies-next";
+
+interface TeacherQualification {
+  title: string;
+  subtitle: string;
+  year: string;
+}
+
+interface TeacherImage {
+  _id: string;
+  filename: string;
+  path: string;
+  key: string;
+}
+
+interface Teacher {
+  _id: string;
+  name: string;
+  email: string;
+  teacherCategory: string;
+  expertise: string[];
+  teachingExperience: string;
+  qualification: TeacherQualification[];
+  additional_courses: string[];
+  achievements: string[];
+  images: TeacherImage[];
+  image: TeacherImage;
+}
+
+interface Student {
+  _id: string;
+  email: string;
+  name: string;
+}
+
+interface EventDetails {
+  _id: string;
+  eventName: string;
+  details: string;
+  availableseats: string;
+  eventmode: string;
+  image: string;
+  level: string;
+  location: string;
+  startDate: string;
+  startTime: string;
+  endTime?: string;
+  type: string;
+  teacher: Teacher;
+  students: Student[];
+  status: boolean;
+  description?: string;
+  meeting_number?: string;
+  password?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface UserProfile {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  profileImage?: string;
+  AboutMe?: string;
+  notificationToken?: string;
+  favoriteClasses?: string[];
+  favoriteEvents?: string[];
+  favoriteTeachers?: string[];
+  teacherCategory?: string;
+  attendance?: string[];
+  classFeedback?: string[];
+  images?: string[];
+}
 
 export default function EventsPage() {
-  const router = useRouter();
+  const searchParams = useSearchParams();
+  const [eventDetails, setEventDetails] = useState<EventDetails | null>(null);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [registering, setRegistering] = useState(false);
+  const [toast, setToast] = useState<{
+    show: boolean;
+    message: string;
+    type: "success" | "error";
+  }>({ show: false, message: "", type: "success" });
+
+  // Get event ID from URL or use default
+  const eventId = searchParams.get("eventId") || "686a3c6f4ddb095e0c716963";
+
+  // Fetch user profile to get userId
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      try {
+        const accessToken = getCookie("accessToken");
+        if (!accessToken) {
+          setError("No access token found");
+          return;
+        }
+
+        const response = await fetch(`${BASE_URL}/users/profile`, {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            "Content-Type": "application/json",
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error("Failed to fetch user profile");
+        }
+
+        const data = await response.json();
+        setUserProfile(data);
+      } catch (err) {
+        setError(
+          err instanceof Error ? err.message : "Failed to fetch user profile"
+        );
+      }
+    };
+
+    fetchUserProfile();
+  }, [BASE_URL]);
+
+  useEffect(() => {
+    const fetchEventDetails = async () => {
+      setLoading(true);
+      setError(null);
+
+      try {
+        const accessToken = getCookie("accessToken");
+
+        const response = await fetch(`${BASE_URL}/events/${eventId}`, {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            "Content-Type": "application/json",
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error("Failed to fetch event details");
+        }
+
+        const data = await response.json();
+        setEventDetails(data);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "An error occurred");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchEventDetails();
+  }, [eventId, BASE_URL]);
+
+  // Register for event
+  const handleRegister = async () => {
+    if (!userProfile?.id || !eventDetails?._id) {
+      showToast("User or event information not available", "error");
+      return;
+    }
+
+    setRegistering(true);
+    try {
+      const accessToken = getCookie("accessToken");
+
+      const response = await fetch(`${BASE_URL}/events/register`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          eventId: eventDetails._id,
+          userId: userProfile.id,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Failed to register for event");
+      }
+
+      await response.json();
+      showToast("Successfully registered for the event!", "success");
+
+      // Refresh event details to show updated enrollment
+      setTimeout(() => {
+        window.location.reload();
+      }, 1500);
+    } catch (err) {
+      showToast(
+        err instanceof Error ? err.message : "Failed to register for event",
+        "error"
+      );
+    } finally {
+      setRegistering(false);
+    }
+  };
+
+  // Show toast message
+  const showToast = (message: string, type: "success" | "error") => {
+    setToast({ show: true, message, type });
+    setTimeout(() => {
+      setToast({ show: false, message: "", type: "success" });
+    }, 3000);
+  };
+
+  // Calculate duration in minutes
+  const calculateDuration = () => {
+    if (!eventDetails?.startTime || !eventDetails?.endTime) return "75 minutes";
+
+    const start = new Date(`2000-01-01T${eventDetails.startTime}`);
+    const end = new Date(`2000-01-01T${eventDetails.endTime}`);
+    const diffMs = end.getTime() - start.getTime();
+    const diffMins = Math.round(diffMs / 60000);
+
+    return `${diffMins} minutes`;
+  };
+
+  // Format date
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString("en-US", {
+      weekday: "long",
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
+  };
+
+  // Check if user is already enrolled
+  const isUserEnrolled = () => {
+    if (!userProfile?.id || !eventDetails?.students) return false;
+    return eventDetails.students.some(
+      (student) => student._id === userProfile.id
+    );
+  };
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center py-10 px-4">
+        <div className="bg-white rounded-xl shadow-md p-6 w-full max-w-6xl">
+          <div className="flex items-center justify-center h-64">
+            <div className="text-lg">Loading event details...</div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !eventDetails) {
+    return (
+      <div className="flex justify-center items-center py-10 px-4">
+        <div className="bg-white rounded-xl shadow-md p-6 w-full max-w-6xl">
+          <div className="flex items-center justify-center h-64">
+            <div className="text-lg text-red-500">
+              Error: {error || "Event not found"}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex justify-center items-center py-10 px-4">
       <div className="bg-white rounded-xl shadow-md p-6 w-full max-w-6xl space-y-8">
+        {/* Toast Notification */}
+        {toast.show && (
+          <div
+            className={`fixed top-4 right-4 z-50 px-6 py-3 rounded-lg shadow-lg ${
+              toast.type === "success"
+                ? "bg-green-500 text-white"
+                : "bg-red-500 text-white"
+            }`}
+          >
+            {toast.message}
+          </div>
+        )}
+
         {/* Banner Section */}
         <div className="relative w-full h-[220px] rounded-lg overflow-hidden">
           <Image
-            src="/images/peoples.svg"
-            alt="Upcoming Events"
+            src={eventDetails.image || "/images/peoples.svg"}
+            alt={eventDetails.eventName}
             layout="fill"
             objectFit="cover"
             className="brightness-[0.6] rounded-lg"
@@ -37,8 +316,11 @@ export default function EventsPage() {
           <div className="flex items-center gap-4">
             <div className="relative w-[60px] h-[60px] rounded-full shadow-md ring-2 ring-white overflow-hidden">
               <Image
-                src="https://images.unsplash.com/photo-1607746882042-944635dfe10e?auto=format&fit=crop&w=80&q=80"
-                alt="Host"
+                src={
+                  eventDetails.teacher?.image?.path ||
+                  "https://images.unsplash.com/photo-1607746882042-944635dfe10e?auto=format&fit=crop&w=80&q=80"
+                }
+                alt={eventDetails.teacher?.name || "Host"}
                 layout="fill"
                 objectFit="cover"
               />
@@ -46,10 +328,11 @@ export default function EventsPage() {
 
             <div>
               <h2 className="text-xl font-semibold">
-                Digital Zen: Meditation Journey
+                {eventDetails.eventName}
               </h2>
               <p className="text-gray-600 text-sm">
-                Join our virtual sanctuary for a guided meditation session
+                {eventDetails.details ||
+                  "Join our virtual sanctuary for a guided session"}
               </p>
             </div>
           </div>
@@ -59,12 +342,23 @@ export default function EventsPage() {
             <button className="flex items-center gap-2 border px-4 py-2 rounded-md text-gray-600 hover:bg-gray-100 text-sm">
               <Share2 size={16} /> Share
             </button>
-            <button
-              className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-md text-sm shadow cursor-pointer"
-              onClick={() => router.push("/Homepage/Events/book/online")}
-            >
-              📅 Register Now
-            </button>
+            {isUserEnrolled() ? (
+              <button className="bg-green-500 text-white px-4 py-2 rounded-md text-sm shadow cursor-not-allowed">
+                ✅ Already Enrolled
+              </button>
+            ) : (
+              <button
+                className={`px-4 py-2 rounded-md text-sm shadow cursor-pointer ${
+                  registering
+                    ? "bg-gray-400 text-white cursor-not-allowed"
+                    : "bg-orange-500 hover:bg-orange-600 text-white"
+                }`}
+                onClick={handleRegister}
+                disabled={registering}
+              >
+                {registering ? "Registering..." : "📅 Register Now"}
+              </button>
+            )}
           </div>
         </div>
 
@@ -84,20 +378,36 @@ export default function EventsPage() {
                 </svg>
               </div>
               <div>
-                <h4 className="font-semibold text-sm">Live Stream</h4>
-                <p className="text-xs text-gray-500">Samsara Platform</p>
+                <h4 className="font-semibold text-sm">
+                  {eventDetails.eventmode === "online"
+                    ? "Live Stream"
+                    : "In-Person"}
+                </h4>
+                <p className="text-xs text-gray-500">
+                  {eventDetails.eventmode === "online"
+                    ? "Samsara Platform"
+                    : eventDetails.location}
+                </p>
               </div>
             </div>
             <div className="text-sm space-y-2 text-gray-600">
               <div className="flex items-center gap-2">
-                <CalendarDays className="w-4 h-4" /> Monday, May 26, 2025
+                <CalendarDays className="w-4 h-4" />{" "}
+                {formatDate(eventDetails.startDate)}
               </div>
               <div className="flex items-center gap-2">
-                <Clock className="w-4 h-4" /> 7:30 AM - 8:45 AM
+                <Clock className="w-4 h-4" /> {eventDetails.startTime} -{" "}
+                {eventDetails.endTime || "8:45 AM"}
               </div>
               <div className="flex items-center gap-2">
-                <Timer className="w-4 h-4" /> 75 minutes
+                <Timer className="w-4 h-4" /> {calculateDuration()}
               </div>
+              {eventDetails.meeting_number && (
+                <div className="flex items-center gap-2">
+                  <Wifi className="w-4 h-4" /> Meeting:{" "}
+                  {eventDetails.meeting_number}
+                </div>
+              )}
             </div>
           </div>
 
@@ -114,13 +424,22 @@ export default function EventsPage() {
             </div>
             <div className="text-sm space-y-2 text-gray-600">
               <div className="flex items-center gap-2">
-                <UserPlus className="w-4 h-4" /> 15 Spots Left
+                <UserPlus className="w-4 h-4" /> {eventDetails.availableseats}{" "}
+                Spots Left
               </div>
               <div className="flex items-center gap-2">
-                <Users className="w-4 h-4" /> Max 30 people
+                <Users className="w-4 h-4" /> Max{" "}
+                {parseInt(eventDetails.availableseats) +
+                  (eventDetails.students?.length || 0)}{" "}
+                people
               </div>
               <div className="flex items-center gap-2">
-                <Lightbulb className="w-4 h-4" /> All Levels Welcome
+                <Lightbulb className="w-4 h-4" />{" "}
+                {eventDetails.level || "All Levels Welcome"}
+              </div>
+              <div className="flex items-center gap-2">
+                <Star className="w-4 h-4" />{" "}
+                {eventDetails.students?.length || 0} Enrolled
               </div>
             </div>
           </div>
@@ -145,15 +464,37 @@ export default function EventsPage() {
               </div>
             </div>
             <div className="text-sm space-y-2 text-gray-600">
-              <div className="flex items-center gap-2">
-                <Wifi className="w-4 h-4" /> Stable internet connection
-              </div>
-              <div className="flex items-center gap-2">
-                <Home className="w-4 h-4" /> Quiet space
-              </div>
-              <div className="flex items-center gap-2">
-                <Lock className="w-4 h-4" /> Headphones recommended
-              </div>
+              {eventDetails.eventmode === "online" ? (
+                <>
+                  <div className="flex items-center gap-2">
+                    <Wifi className="w-4 h-4" /> Stable internet connection
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Home className="w-4 h-4" /> Quiet space
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Lock className="w-4 h-4" /> Headphones recommended
+                  </div>
+                  {eventDetails.password && (
+                    <div className="flex items-center gap-2">
+                      <Lock className="w-4 h-4" /> Password:{" "}
+                      {eventDetails.password}
+                    </div>
+                  )}
+                </>
+              ) : (
+                <>
+                  <div className="flex items-center gap-2">
+                    <Home className="w-4 h-4" /> Comfortable clothing
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Users className="w-4 h-4" /> Arrive 10 minutes early
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Lightbulb className="w-4 h-4" /> Bring water bottle
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -163,37 +504,108 @@ export default function EventsPage() {
           <div className="bg-white rounded-xl shadow-sm p-6 md:col-span-2">
             <h3 className="text-lg font-semibold mb-2">About This Event</h3>
             <p className="text-sm text-gray-600 leading-relaxed">
-              Experience deep relaxation and inner peace from the comfort of
-              your home. This virtual meditation session combines ancient wisdom
-              with modern mindfulness techniques, creating a unique journey of
-              self-discovery and tranquility. Perfect for both beginners and
-              experienced practitioners, our guided session will help you
-              develop a stronger mind-body connection and establish a regular
-              meditation practice.
+              {eventDetails.description ||
+                eventDetails.details ||
+                "Experience deep relaxation and inner peace from the comfort of your home. This virtual meditation session combines ancient wisdom with modern mindfulness techniques, creating a unique journey of self-discovery and tranquility. Perfect for both beginners and experienced practitioners, our guided session will help you develop a stronger mind-body connection and establish a regular meditation practice."}
             </p>
           </div>
 
           {/* Your Host */}
           <div className="bg-white rounded-xl shadow-sm p-6">
             <h3 className="text-lg font-semibold mb-3">Your Host</h3>
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-4 mb-4">
               <div className="relative w-[50px] h-[50px] rounded-full shadow-md ring-2 ring-white overflow-hidden">
                 <Image
-                  src="https://images.unsplash.com/photo-1607746882042-944635dfe10e?auto=format&fit=crop&w=80&q=80"
-                  alt="Host"
-                  fill // ✅ modern replacement for layout="fill"
+                  src={
+                    eventDetails.teacher?.image?.path ||
+                    "https://images.unsplash.com/photo-1607746882042-944635dfe10e?auto=format&fit=crop&w=80&q=80"
+                  }
+                  alt={eventDetails.teacher?.name || "Host"}
+                  fill
                   className="object-cover"
                 />
               </div>
               <div>
-                <p className="font-medium text-sm">Emma Richardson</p>
+                <p className="font-medium text-sm">
+                  {eventDetails.teacher?.name || "Unknown Host"}
+                </p>
                 <p className="text-xs text-gray-500">
-                  Certified Meditation Instructor & Wellness Coach
+                  {eventDetails.teacher?.teacherCategory ||
+                    "Certified Instructor & Wellness Coach"}
+                </p>
+                <p className="text-xs text-gray-500">
+                  {eventDetails.teacher?.teachingExperience} years experience
                 </p>
               </div>
             </div>
+
+            {/* Teacher Expertise */}
+            {eventDetails.teacher?.expertise &&
+              eventDetails.teacher.expertise.length > 0 && (
+                <div className="mb-3">
+                  <h4 className="text-sm font-medium mb-2">Expertise</h4>
+                  <div className="flex flex-wrap gap-1">
+                    {eventDetails.teacher.expertise.map((skill, index) => (
+                      <span
+                        key={index}
+                        className="bg-orange-100 text-orange-600 text-xs px-2 py-1 rounded-full"
+                      >
+                        {skill}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+            {/* Teacher Qualifications */}
+            {eventDetails.teacher?.qualification &&
+              eventDetails.teacher.qualification.length > 0 && (
+                <div>
+                  <h4 className="text-sm font-medium mb-2">Qualifications</h4>
+                  <div className="space-y-1">
+                    {eventDetails.teacher.qualification.map((qual, index) => (
+                      <div
+                        key={index}
+                        className="flex items-center gap-2 text-xs text-gray-600"
+                      >
+                        <GraduationCap className="w-3 h-3" />
+                        <span>
+                          {qual.title} - {qual.subtitle} ({qual.year})
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
           </div>
         </div>
+
+        {/* Enrolled Students Section */}
+        {eventDetails.students && eventDetails.students.length > 0 && (
+          <div className="bg-white rounded-xl shadow-sm p-6">
+            <h3 className="text-lg font-semibold mb-3">
+              Enrolled Students ({eventDetails.students.length})
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+              {eventDetails.students.map((student) => (
+                <div
+                  key={student._id}
+                  className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg"
+                >
+                  <div className="w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center">
+                    <span className="text-xs font-medium text-orange-600">
+                      {student.name.charAt(0).toUpperCase()}
+                    </span>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium">{student.name}</p>
+                    <p className="text-xs text-gray-500">{student.email}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

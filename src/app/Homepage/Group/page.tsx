@@ -14,11 +14,13 @@ interface ClassType {
   type?: string;
   status?: string;
   availableseats?: number;
+  startDate?: string; // Add startDate for filtering
 }
 
 export default function ClassesPage() {
-  // const router = useRouter(); // removed unused router
   const [classes, setClasses] = useState<ClassType[]>([]);
+  const [filteredClasses, setFilteredClasses] = useState<ClassType[]>([]);
+  const [selectedFilter, setSelectedFilter] = useState("All");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -36,6 +38,7 @@ export default function ClassesPage() {
           else classArray = [];
         }
         setClasses(classArray);
+        setFilteredClasses(classArray); // Initialize filtered classes
       } catch {
         setError("Failed to fetch classes");
       } finally {
@@ -44,6 +47,65 @@ export default function ClassesPage() {
     };
     fetchClasses();
   }, []);
+
+  // Filter classes based on selected filter
+  const filterClasses = (filter: string) => {
+    setSelectedFilter(filter);
+
+    const today = new Date().toISOString().split("T")[0];
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const tomorrowDate = tomorrow.toISOString().split("T")[0];
+
+    if (filter === "All") {
+      setFilteredClasses(classes);
+    } else if (filter === "Today") {
+      setFilteredClasses(
+        classes.filter((classItem) => {
+          // Use startDate if available, otherwise use schedule
+          if (classItem.startDate) {
+            const classDate = new Date(classItem.startDate)
+              .toISOString()
+              .split("T")[0];
+            return classDate === today;
+          } else if (classItem.schedule) {
+            const classDate = new Date(classItem.schedule)
+              .toISOString()
+              .split("T")[0];
+            return classDate === today;
+          }
+          // If no date info, assume it's today's class
+          return true;
+        })
+      );
+    } else if (filter === "Tomorrow") {
+      setFilteredClasses(
+        classes.filter((classItem) => {
+          if (classItem.startDate) {
+            const classDate = new Date(classItem.startDate)
+              .toISOString()
+              .split("T")[0];
+            return classDate === tomorrowDate;
+          } else if (classItem.schedule) {
+            const classDate = new Date(classItem.schedule)
+              .toISOString()
+              .split("T")[0];
+            return classDate === tomorrowDate;
+          }
+          // If no date info, assume it's not tomorrow's class
+          return false;
+        })
+      );
+    }
+  };
+
+  // Update filtered classes when classes change
+  useEffect(() => {
+    setFilteredClasses(classes);
+  }, [classes]);
+
+  const filters = ["All", "Today", "Tomorrow"];
+
   return (
     <div className="flex justify-center items-center py-10 px-4">
       <div className="bg-white rounded-xl shadow-md p-6 w-full max-w-6xl space-y-8">
@@ -63,21 +125,26 @@ export default function ClassesPage() {
             </div>
           </div>
           <div className="absolute top-4 right-4 bg-orange-500 text-white text-sm px-3 py-1 rounded-full shadow-md">
-            15+ Classes Today
+            {filteredClasses.length}+ Classes{" "}
+            {selectedFilter !== "All" ? selectedFilter : "Today"}
           </div>
         </div>
 
         {/* Filter Tabs */}
         <div className="flex gap-3">
-          <button className="px-4 py-1 bg-orange-500 text-white rounded-full text-sm font-medium">
-            All
-          </button>
-          <button className="px-4 py-1 bg-gray-100 text-gray-600 rounded-full text-sm font-medium">
-            Today
-          </button>
-          <button className="px-4 py-1 bg-gray-100 text-gray-600 rounded-full text-sm font-medium">
-            Tomorrow
-          </button>
+          {filters.map((filter, index) => (
+            <button
+              key={index}
+              className={`px-4 py-1 rounded-full text-sm font-medium transition-colors ${
+                selectedFilter === filter
+                  ? "bg-orange-500 text-white"
+                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+              }`}
+              onClick={() => filterClasses(filter)}
+            >
+              {filter}
+            </button>
+          ))}
         </div>
 
         {/* Online Classes Header */}
@@ -98,12 +165,12 @@ export default function ClassesPage() {
             <div className="col-span-3 text-center text-red-500 py-8">
               {error}
             </div>
-          ) : classes.length === 0 ? (
+          ) : filteredClasses.length === 0 ? (
             <div className="col-span-3 text-center py-8">
-              No classes scheduled.
+              No classes available for {selectedFilter.toLowerCase()}.
             </div>
           ) : (
-            classes.map((item, i) => (
+            filteredClasses.map((item, i) => (
               <div
                 key={item._id || i}
                 className="rounded-xl border border-gray-200 overflow-hidden shadow-sm bg-white"

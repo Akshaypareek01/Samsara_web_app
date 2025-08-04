@@ -30,6 +30,8 @@ type Event = {
 export default function EventsPage() {
   const router = useRouter();
   const [events, setEvents] = useState<Event[]>([]);
+  const [filteredEvents, setFilteredEvents] = useState<Event[]>([]);
+  const [selectedFilter, setSelectedFilter] = useState("All");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [seeAllOnline, setSeeAllOnline] = useState(false);
@@ -115,6 +117,7 @@ export default function EventsPage() {
         }
         const data = await res.json();
         setEvents(data);
+        setFilteredEvents(data); // Initialize filtered events with all events
       } catch {
         setError("Network error");
       } finally {
@@ -124,8 +127,47 @@ export default function EventsPage() {
     fetchEvents();
   }, []);
 
-  const onlineEvents = events.filter((e) => e.eventmode === "online");
-  const offlineEvents = events.filter((e) => e.eventmode === "offline");
+  // Filter events based on selected filter
+  const filterEvents = (filter: string) => {
+    setSelectedFilter(filter);
+
+    const today = new Date().toISOString().split("T")[0];
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const tomorrowDate = tomorrow.toISOString().split("T")[0];
+
+    if (filter === "All") {
+      setFilteredEvents(events);
+    } else if (filter === "Today") {
+      setFilteredEvents(
+        events.filter((event) => {
+          const eventDate = new Date(event.startDate)
+            .toISOString()
+            .split("T")[0];
+          return eventDate === today;
+        })
+      );
+    } else if (filter === "Tomorrow") {
+      setFilteredEvents(
+        events.filter((event) => {
+          const eventDate = new Date(event.startDate)
+            .toISOString()
+            .split("T")[0];
+          return eventDate === tomorrowDate;
+        })
+      );
+    }
+  };
+
+  // Update filtered events when events change
+  useEffect(() => {
+    setFilteredEvents(events);
+  }, [events]);
+
+  const onlineEvents = filteredEvents.filter((e) => e.eventmode === "online");
+  const offlineEvents = filteredEvents.filter((e) => e.eventmode === "offline");
+
+  const filters = ["All", "Today", "Tomorrow"];
 
   return (
     <div className="flex justify-center items-center py-10 px-4">
@@ -148,21 +190,25 @@ export default function EventsPage() {
             </div>
           </div>
           <div className="absolute top-4 right-4 bg-orange-500 text-white text-sm px-3 py-1 rounded-full shadow-md">
-            {events.length}+ Events
+            {filteredEvents.length}+ Events
           </div>
         </div>
 
         {/* Filter Tabs */}
         <div className="flex gap-3">
-          <button className="px-4 py-1 bg-orange-500 text-white rounded-full text-sm font-medium">
-            All
-          </button>
-          <button className="px-4 py-1 bg-gray-100 text-gray-600 rounded-full text-sm font-medium">
-            Today
-          </button>
-          <button className="px-4 py-1 bg-gray-100 text-gray-600 rounded-full text-sm font-medium">
-            Tomorrow
-          </button>
+          {filters.map((filter, index) => (
+            <button
+              key={index}
+              className={`px-4 py-1 rounded-full text-sm font-medium transition-colors ${
+                selectedFilter === filter
+                  ? "bg-orange-500 text-white"
+                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+              }`}
+              onClick={() => filterEvents(filter)}
+            >
+              {filter}
+            </button>
+          ))}
         </div>
 
         {/* Online Events Header */}
@@ -246,7 +292,11 @@ export default function EventsPage() {
                       </div>
                       <button
                         className="bg-orange-500 text-white text-xs px-3 py-1 rounded-md hover:bg-orange-600 cursor-pointer"
-                        onClick={() => router.push("/Homepage/Events/book")}
+                        onClick={() =>
+                          router.push(
+                            `/Homepage/Events/book?eventId=${event._id}`
+                          )
+                        }
                       >
                         Book
                       </button>
@@ -259,7 +309,7 @@ export default function EventsPage() {
         </div>
 
         <div className="flex justify-between items-center">
-          <h3 className="text-lg font-semibold">Ofline Events</h3>
+          <h3 className="text-lg font-semibold">Offline Events</h3>
           {offlineEvents.length > 3 && (
             <button
               className="text-orange-500 text-sm font-medium"
@@ -336,7 +386,14 @@ export default function EventsPage() {
                         <Users size={14} />
                         {event.availableseats} spots left
                       </div>
-                      <button className="bg-orange-500 text-white text-xs px-3 py-1 rounded-md">
+                      <button
+                        className="bg-orange-500 text-white text-xs px-3 py-1 rounded-md hover:bg-orange-600 cursor-pointer"
+                        onClick={() =>
+                          router.push(
+                            `/Homepage/Events/book?eventId=${event._id}`
+                          )
+                        }
+                      >
                         Book
                       </button>
                     </div>
