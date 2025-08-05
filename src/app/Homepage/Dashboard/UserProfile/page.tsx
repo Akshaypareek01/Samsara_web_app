@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import {
   User,
@@ -17,6 +17,9 @@ import {
   Activity,
   TrendingUp,
   CheckCircle,
+  X,
+  Plus,
+  Trash2,
 } from "lucide-react";
 import { getCookie } from "cookies-next";
 import { BASE_URL } from "@/lib/utils";
@@ -36,6 +39,7 @@ interface UserProfile {
   role: string;
   profileImage?: string;
   AboutMe?: string;
+  description?: string;
   notificationToken?: string;
   favoriteClasses?: string[];
   favoriteEvents?: string[];
@@ -49,13 +53,35 @@ interface UserProfile {
   gender?: string;
   height?: string;
   weight?: string;
+  mobile?: string;
+  dob?: string;
+  Address?: string;
+  city?: string;
+  pincode?: string;
+  country?: string;
+  targetWeight?: string;
+  weeklyyogaplan?: string;
+  practicetime?: string;
+  howyouknowus?: string;
+  PriorExperience?: string;
+  teacherCategory?: string;
+  teachingExperience?: string;
+  company_name?: string;
+  companyId?: string;
+  corporate_id?: string;
   expertise?: string[];
   qualification?: Array<{
     title: string;
     subtitle: string;
     year: string;
+    degree?: string;
+    institution?: string;
   }>;
-  additional_courses?: string[];
+  additional_courses?: Array<{
+    course?: string;
+    institution?: string;
+    year?: string;
+  }>;
   focusarea?: string[];
   goal?: string[];
   health_issues?: string[];
@@ -75,6 +101,18 @@ export default function UserProfilePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("overview");
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editFormData, setEditFormData] = useState<Partial<UserProfile>>({});
+  const [profileImageFile, setProfileImageFile] = useState<File | null>(null);
+  const [profileImagePreview, setProfileImagePreview] = useState<string | null>(
+    null
+  );
+  const [newTag, setNewTag] = useState({
+    focusarea: "",
+    goal: "",
+    health_issues: "",
+  });
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const fetchUserProfile = async () => {
@@ -112,6 +150,276 @@ export default function UserProfilePage() {
 
     fetchUserProfile();
   }, []);
+
+  // Initialize edit form data when modal opens
+  useEffect(() => {
+    if (isEditModalOpen && userProfile) {
+      setEditFormData({ ...userProfile });
+      setProfileImagePreview(null);
+      setProfileImageFile(null);
+      setNewTag({ focusarea: "", goal: "", health_issues: "" });
+    }
+  }, [isEditModalOpen, userProfile]);
+
+  const handleEditInputChange = (
+    e: React.ChangeEvent<
+      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+    >
+  ) => {
+    const { name, value } = e.target;
+    setEditFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleTagInputChange = (
+    e: React.ChangeEvent<HTMLInputElement>,
+    field: keyof typeof newTag
+  ) => {
+    setNewTag((prev) => ({ ...prev, [field]: e.target.value }));
+  };
+
+  const handleAddTag = (field: "focusarea" | "goal" | "health_issues") => {
+    if (!newTag[field]?.trim()) return;
+
+    setEditFormData((prev) => {
+      const currentTags = Array.isArray(prev[field])
+        ? [...(prev[field] as string[])]
+        : [];
+      return {
+        ...prev,
+        [field]: [...currentTags, newTag[field]],
+      };
+    });
+
+    setNewTag((prev) => ({ ...prev, [field]: "" }));
+  };
+
+  const handleRemoveTag = (
+    field: "focusarea" | "goal" | "health_issues",
+    index: number
+  ) => {
+    setEditFormData((prev) => {
+      const currentTags = Array.isArray(prev[field])
+        ? [...(prev[field] as string[])]
+        : [];
+      currentTags.splice(index, 1);
+      return { ...prev, [field]: currentTags };
+    });
+  };
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      setProfileImageFile(file);
+
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setProfileImagePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const triggerFileInput = () => {
+    if (fileInputRef.current) {
+      fileInputRef.current.click();
+    }
+  };
+
+  const handleRemoveImage = () => {
+    setProfileImageFile(null);
+    setProfileImagePreview(null);
+    setEditFormData((prev) => ({ ...prev, profileImage: undefined }));
+  };
+
+  const handleSubmitEdit = async () => {
+    try {
+      const accessToken = getCookie("accessToken");
+      if (!accessToken) {
+        toast.error("Please login to update your profile");
+        return;
+      }
+
+      let imageUrl = null;
+
+      // First, upload image if exists
+      if (profileImageFile) {
+        const imageFormData = new FormData();
+        imageFormData.append("file", profileImageFile);
+
+        const uploadResponse = await fetch(`${BASE_URL}/upload`, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+          body: imageFormData,
+        });
+
+        if (!uploadResponse.ok) {
+          throw new Error("Failed to upload image");
+        }
+
+        const uploadResult = await uploadResponse.json();
+        if (uploadResult.success) {
+          imageUrl = uploadResult.url;
+        } else {
+          throw new Error("Image upload failed");
+        }
+      }
+
+      // Prepare profile update data - only include fields that have values
+      const profileUpdateData: Partial<UserProfile> = {};
+
+      // Only add fields that have actual values (not empty strings)
+      if (editFormData.name && editFormData.name.trim()) {
+        profileUpdateData.name = editFormData.name;
+      }
+      if (editFormData.mobile && editFormData.mobile.trim()) {
+        profileUpdateData.mobile = editFormData.mobile;
+      }
+      if (editFormData.gender && editFormData.gender.trim()) {
+        profileUpdateData.gender = editFormData.gender;
+      }
+      if (editFormData.dob && editFormData.dob.trim()) {
+        profileUpdateData.dob = editFormData.dob;
+      }
+      if (editFormData.age && editFormData.age.trim()) {
+        profileUpdateData.age = editFormData.age;
+      }
+      if (editFormData.Address && editFormData.Address.trim()) {
+        profileUpdateData.Address = editFormData.Address;
+      }
+      if (editFormData.city && editFormData.city.trim()) {
+        profileUpdateData.city = editFormData.city;
+      }
+      if (editFormData.pincode && editFormData.pincode.trim()) {
+        profileUpdateData.pincode = editFormData.pincode;
+      }
+      if (editFormData.country && editFormData.country.trim()) {
+        profileUpdateData.country = editFormData.country;
+      }
+      if (editFormData.height && editFormData.height.trim()) {
+        profileUpdateData.height = editFormData.height;
+      }
+      if (editFormData.weight && editFormData.weight.trim()) {
+        profileUpdateData.weight = editFormData.weight;
+      }
+      if (editFormData.targetWeight && editFormData.targetWeight.trim()) {
+        profileUpdateData.targetWeight = editFormData.targetWeight;
+      }
+      if (editFormData.bodyshape && editFormData.bodyshape.trim()) {
+        profileUpdateData.bodyshape = editFormData.bodyshape;
+      }
+      if (editFormData.weeklyyogaplan && editFormData.weeklyyogaplan.trim()) {
+        profileUpdateData.weeklyyogaplan = editFormData.weeklyyogaplan;
+      }
+      if (editFormData.practicetime && editFormData.practicetime.trim()) {
+        profileUpdateData.practicetime = editFormData.practicetime;
+      }
+      if (editFormData.focusarea && editFormData.focusarea.length > 0) {
+        profileUpdateData.focusarea = editFormData.focusarea;
+      }
+      if (editFormData.goal && editFormData.goal.length > 0) {
+        profileUpdateData.goal = editFormData.goal;
+      }
+      if (editFormData.health_issues && editFormData.health_issues.length > 0) {
+        profileUpdateData.health_issues = editFormData.health_issues;
+      }
+      if (editFormData.howyouknowus && editFormData.howyouknowus.trim()) {
+        profileUpdateData.howyouknowus = editFormData.howyouknowus;
+      }
+      if (editFormData.PriorExperience && editFormData.PriorExperience.trim()) {
+        profileUpdateData.PriorExperience = editFormData.PriorExperience;
+      }
+      if (editFormData.AboutMe && editFormData.AboutMe.trim()) {
+        profileUpdateData.description = editFormData.AboutMe;
+      }
+      if (editFormData.achievements && editFormData.achievements.length > 0) {
+        profileUpdateData.achievements = editFormData.achievements;
+      }
+      if (editFormData.userCategory && editFormData.userCategory.trim()) {
+        profileUpdateData.userCategory = editFormData.userCategory;
+      }
+      if (editFormData.teacherCategory && editFormData.teacherCategory.trim()) {
+        profileUpdateData.teacherCategory = editFormData.teacherCategory;
+      }
+      if (
+        editFormData.teachingExperience &&
+        editFormData.teachingExperience.trim()
+      ) {
+        profileUpdateData.teachingExperience = editFormData.teachingExperience;
+      }
+      if (editFormData.expertise && editFormData.expertise.length > 0) {
+        profileUpdateData.expertise = editFormData.expertise;
+      }
+      if (editFormData.qualification && editFormData.qualification.length > 0) {
+        profileUpdateData.qualification = editFormData.qualification;
+      }
+      if (
+        editFormData.additional_courses &&
+        editFormData.additional_courses.length > 0
+      ) {
+        profileUpdateData.additional_courses = editFormData.additional_courses;
+      }
+      if (editFormData.company_name && editFormData.company_name.trim()) {
+        profileUpdateData.company_name = editFormData.company_name;
+      }
+      if (editFormData.companyId && editFormData.companyId.trim()) {
+        profileUpdateData.companyId = editFormData.companyId;
+      }
+      if (editFormData.corporate_id && editFormData.corporate_id.trim()) {
+        profileUpdateData.corporate_id = editFormData.corporate_id;
+      }
+
+      // Update profile
+      const profileResponse = await fetch(`${BASE_URL}/users/profile`, {
+        method: "PATCH",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(profileUpdateData),
+      });
+
+      if (!profileResponse.ok) {
+        throw new Error("Failed to update profile");
+      }
+
+      const updatedProfile = await profileResponse.json();
+
+      // If image was uploaded, update profile image separately
+      if (imageUrl) {
+        const imageUpdateResponse = await fetch(
+          `${BASE_URL}/users/profile/image`,
+          {
+            method: "PATCH",
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              profileImage: imageUrl,
+            }),
+          }
+        );
+
+        if (!imageUpdateResponse.ok) {
+          console.warn("Failed to update profile image");
+        } else {
+          const imageUpdateResult = await imageUpdateResponse.json();
+          updatedProfile.profileImage =
+            imageUpdateResult.profileImage || imageUrl;
+        }
+      }
+
+      setUserProfile(updatedProfile);
+      setIsEditModalOpen(false);
+      toast.success("Profile updated successfully!");
+    } catch (err) {
+      const errorMessage =
+        err instanceof Error ? err.message : "Failed to update profile";
+      toast.error(errorMessage);
+    }
+  };
 
   if (loading) {
     return (
@@ -172,7 +480,10 @@ export default function UserProfilePage() {
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex justify-between items-center py-6">
               <h1 className="text-2xl font-bold text-gray-900">My Profile</h1>
-              <button className="flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg">
+              <button
+                onClick={() => setIsEditModalOpen(true)}
+                className="flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg"
+              >
                 <Edit size={16} />
                 Edit Profile
               </button>
@@ -636,6 +947,350 @@ export default function UserProfilePage() {
           </div>
         </div>
       </div>
+
+      {/* Edit Profile Modal */}
+      {isEditModalOpen && (
+        <div className="fixed inset-0 bg-opacity-50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-2xl font-bold text-gray-900">
+                  Edit Profile
+                </h2>
+                <button
+                  onClick={() => setIsEditModalOpen(false)}
+                  className="text-gray-500 hover:text-gray-700"
+                >
+                  <X size={24} />
+                </button>
+              </div>
+
+              <div className="space-y-6">
+                {/* Profile Image Section */}
+                <div className="text-center">
+                  <div className="relative inline-block">
+                    <div className="w-32 h-32 rounded-full overflow-hidden border-4 border-orange-100 mx-auto">
+                      <Image
+                        src={
+                          profileImagePreview ||
+                          editFormData.profileImage ||
+                          "/images/user1.svg"
+                        }
+                        alt="Profile"
+                        width={128}
+                        height={128}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                    <div className="flex justify-center mt-4 gap-2">
+                      <button
+                        onClick={triggerFileInput}
+                        className="flex items-center gap-1 bg-gray-200 hover:bg-gray-300 text-gray-800 px-3 py-1 rounded-md text-sm"
+                      >
+                        <Camera size={14} />
+                        Change
+                      </button>
+                      <button
+                        onClick={handleRemoveImage}
+                        className="flex items-center gap-1 bg-red-100 hover:bg-red-200 text-red-700 px-3 py-1 rounded-md text-sm"
+                      >
+                        <Trash2 size={14} />
+                        Remove
+                      </button>
+                    </div>
+                    <input
+                      type="file"
+                      ref={fileInputRef}
+                      onChange={handleImageChange}
+                      accept="image/*"
+                      className="hidden"
+                    />
+                  </div>
+                </div>
+
+                {/* Basic Info Section */}
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                    Basic Information
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Full Name
+                      </label>
+                      <input
+                        type="text"
+                        name="name"
+                        value={editFormData.name || ""}
+                        onChange={handleEditInputChange}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Email
+                      </label>
+                      <input
+                        type="email"
+                        name="email"
+                        value={editFormData.email || ""}
+                        onChange={handleEditInputChange}
+                        disabled
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100 cursor-not-allowed"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Age
+                      </label>
+                      <input
+                        type="number"
+                        name="age"
+                        value={editFormData.age || ""}
+                        onChange={handleEditInputChange}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Gender
+                      </label>
+                      <select
+                        name="gender"
+                        value={editFormData.gender || ""}
+                        onChange={handleEditInputChange}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                      >
+                        <option value="">Select</option>
+                        <option value="male">Male</option>
+                        <option value="female">Female</option>
+                        <option value="other">Other</option>
+                        <option value="prefer-not-to-say">
+                          Prefer not to say
+                        </option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Body Type
+                      </label>
+                      <input
+                        type="text"
+                        name="bodyshape"
+                        value={editFormData.bodyshape || ""}
+                        onChange={handleEditInputChange}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Height (cm)
+                      </label>
+                      <input
+                        type="number"
+                        name="height"
+                        value={editFormData.height || ""}
+                        onChange={handleEditInputChange}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Weight (kg)
+                      </label>
+                      <input
+                        type="number"
+                        name="weight"
+                        value={editFormData.weight || ""}
+                        onChange={handleEditInputChange}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Teacher Category
+                      </label>
+                      <select
+                        name="teacherCategory"
+                        value={editFormData.teacherCategory || ""}
+                        onChange={handleEditInputChange}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                      >
+                        <option value="">Select Teacher Category</option>
+                        <option value="Fitness Coach">Fitness Coach</option>
+                        <option value="Ayurveda Specialist">
+                          Ayurveda Specialist
+                        </option>
+                        <option value="Mental Health Specialist">
+                          Mental Health Specialist
+                        </option>
+                        <option value="Yoga Trainer">Yoga Trainer</option>
+                        <option value="General Trainer">General Trainer</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                {/* About Me Section */}
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                    About Me
+                  </h3>
+                  <textarea
+                    name="AboutMe"
+                    value={editFormData.AboutMe || ""}
+                    onChange={handleEditInputChange}
+                    rows={4}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                    placeholder="Tell us about yourself..."
+                  ></textarea>
+                </div>
+
+                {/* Focus Areas Section */}
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                    Focus Areas
+                  </h3>
+                  <div className="flex flex-wrap gap-2 mb-3">
+                    {(editFormData.focusarea || []).map((area, index) => (
+                      <div
+                        key={index}
+                        className="bg-orange-100 text-orange-800 px-3 py-1 rounded-full flex items-center"
+                      >
+                        {area}
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveTag("focusarea", index)}
+                          className="ml-2 text-orange-800 hover:text-orange-900"
+                        >
+                          <X size={14} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={newTag.focusarea}
+                      onChange={(e) => handleTagInputChange(e, "focusarea")}
+                      placeholder="Add focus area"
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => handleAddTag("focusarea")}
+                      className="bg-orange-500 hover:bg-orange-600 text-white px-3 py-2 rounded-md flex items-center"
+                    >
+                      <Plus size={16} /> Add
+                    </button>
+                  </div>
+                </div>
+
+                {/* Goals Section */}
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                    Goals
+                  </h3>
+                  <div className="flex flex-wrap gap-2 mb-3">
+                    {(editFormData.goal || []).map((goal, index) => (
+                      <div
+                        key={index}
+                        className="bg-green-100 text-green-800 px-3 py-1 rounded-full flex items-center"
+                      >
+                        {goal}
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveTag("goal", index)}
+                          className="ml-2 text-green-800 hover:text-green-900"
+                        >
+                          <X size={14} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={newTag.goal}
+                      onChange={(e) => handleTagInputChange(e, "goal")}
+                      placeholder="Add a goal"
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => handleAddTag("goal")}
+                      className="bg-orange-500 hover:bg-orange-600 text-white px-3 py-2 rounded-md flex items-center"
+                    >
+                      <Plus size={16} /> Add
+                    </button>
+                  </div>
+                </div>
+
+                {/* Health Considerations Section */}
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                    Health Considerations
+                  </h3>
+                  <div className="flex flex-wrap gap-2 mb-3">
+                    {(editFormData.health_issues || []).map((issue, index) => (
+                      <div
+                        key={index}
+                        className="bg-red-100 text-red-800 px-3 py-1 rounded-full flex items-center"
+                      >
+                        {issue}
+                        <button
+                          type="button"
+                          onClick={() =>
+                            handleRemoveTag("health_issues", index)
+                          }
+                          className="ml-2 text-red-800 hover:text-red-900"
+                        >
+                          <X size={14} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={newTag.health_issues}
+                      onChange={(e) => handleTagInputChange(e, "health_issues")}
+                      placeholder="Add health consideration"
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => handleAddTag("health_issues")}
+                      className="bg-orange-500 hover:bg-orange-600 text-white px-3 py-2 rounded-md flex items-center"
+                    >
+                      <Plus size={16} /> Add
+                    </button>
+                  </div>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex justify-end gap-4 pt-4">
+                  <button
+                    type="button"
+                    onClick={() => setIsEditModalOpen(false)}
+                    className="px-6 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-100"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleSubmitEdit}
+                    className="px-6 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-md flex items-center gap-2"
+                  >
+                    <CheckCircle size={16} />
+                    Save Changes
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }
