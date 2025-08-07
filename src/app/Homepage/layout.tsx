@@ -154,6 +154,12 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             isActive={pathname === "/Homepage/Mybody"}
             onClick={() => router.push("/Homepage/Mybody")}
           />
+          <MenuItem
+            icon={<Activity size={18} />}
+            label="Tracker"
+            isActive={pathname === "/Homepage/Tracker"}
+            onClick={() => router.push("/Homepage/Tracker")}
+          />
         </nav>
       </aside>
 

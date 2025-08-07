@@ -1,17 +1,9 @@
 "use client";
-import React, { useState, useEffect } from "react";
-import {
-  Activity,
-  User,
-  Scale,
-  Thermometer,
-  Droplets,
-  Target,
-  Moon,
-  Dumbbell,
-  ChevronRight,
-} from "lucide-react";
-import { BASE_URL } from "@/lib/utils";
+import * as React from "react";
+import { useState, useEffect } from "react";
+import { User, Scale, Thermometer, Droplets, Target, Moon } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { BASE_URL } from "../../../lib/utils";
 
 interface TrackerData {
   weightTracker?: {
@@ -80,6 +72,7 @@ interface TrackerData {
 }
 
 const HealthTracker = () => {
+  const router = useRouter();
   const [trackerData, setTrackerData] = useState<TrackerData | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -134,15 +127,6 @@ const HealthTracker = () => {
     return [
       {
         id: 1,
-        title: "Step Tracker",
-        icon: <Activity className="w-8 h-8 text-white" />,
-        bgColor: "bg-gradient-to-br from-blue-400 to-blue-600",
-        value: trackerData.stepTracker ? "Active" : "Not Active",
-        label: "Status",
-        status: trackerData.stepTracker ? "Active" : "Inactive",
-      },
-      {
-        id: 2,
         title: "BMI Tracker",
         icon: <User className="w-8 h-8 text-white" />,
         bgColor: "bg-gradient-to-br from-green-400 to-green-600",
@@ -153,9 +137,10 @@ const HealthTracker = () => {
         status: trackerData.bmiTracker
           ? trackerData.bmiTracker.bmi.category
           : "Not Available",
+        path: "/Homepage/Tracker/Bmi",
       },
       {
-        id: 3,
+        id: 2,
         title: "Weight Tracker",
         icon: <Scale className="w-8 h-8 text-white" />,
         bgColor: "bg-gradient-to-br from-purple-400 to-purple-600",
@@ -170,9 +155,10 @@ const HealthTracker = () => {
             ? `${Math.abs(trackerData.weightTracker.totalLoss)} kg gained`
             : "Maintaining"
           : "Not Available",
+        path: "/Homepage/Tracker/Weight",
       },
       {
-        id: 4,
+        id: 3,
         title: "Temperature",
         icon: <Thermometer className="w-8 h-8 text-white" />,
         bgColor: "bg-gradient-to-br from-red-400 to-red-600",
@@ -183,9 +169,10 @@ const HealthTracker = () => {
         status: trackerData.temperatureTracker
           ? trackerData.temperatureTracker.status
           : "Not Available",
+        path: "/Homepage/Tracker/Temperature",
       },
       {
-        id: 5,
+        id: 4,
         title: "Water Tracker",
         icon: <Droplets className="w-8 h-8 text-white" />,
         bgColor: "bg-gradient-to-br from-cyan-400 to-cyan-600",
@@ -196,9 +183,10 @@ const HealthTracker = () => {
         status: trackerData.waterTracker
           ? trackerData.waterTracker.status
           : "Not Available",
+        path: "/Homepage/Tracker/water",
       },
       {
-        id: 6,
+        id: 5,
         title: "Fat Tracker",
         icon: <Target className="w-8 h-8 text-white" />,
         bgColor: "bg-gradient-to-br from-yellow-400 to-yellow-600",
@@ -213,9 +201,10 @@ const HealthTracker = () => {
             ? "Moderate"
             : "High"
           : "Not Available",
+        path: "/Homepage/Tracker/Fat",
       },
       {
-        id: 7,
+        id: 6,
         title: "Sleep Tracker",
         icon: <Moon className="w-8 h-8 text-white" />,
         bgColor: "bg-gradient-to-br from-indigo-500 to-indigo-700",
@@ -230,19 +219,7 @@ const HealthTracker = () => {
             ? "Fair"
             : "Poor"
           : "Not Available",
-      },
-      {
-        id: 8,
-        title: "Body Status",
-        icon: <Dumbbell className="w-8 h-8 text-white" />,
-        bgColor: "bg-gradient-to-br from-pink-400 to-pink-600",
-        value: trackerData.bodyStatus
-          ? `${trackerData.bodyStatus.weight.value} ${trackerData.bodyStatus.weight.unit}`
-          : "N/A",
-        label: "Current Weight",
-        status: trackerData.bodyStatus
-          ? trackerData.bodyStatus.bmi.category
-          : "Not Available",
+        path: "/Homepage/Tracker/sleep",
       },
     ];
   };
@@ -312,6 +289,7 @@ const HealthTracker = () => {
             <div
               key={tracker.id}
               className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 hover:shadow-md transition-shadow cursor-pointer h-48 flex flex-col"
+              onClick={() => router.push(tracker.path)}
             >
               {/* Icon Section */}
               <div
@@ -321,9 +299,6 @@ const HealthTracker = () => {
                   {React.cloneElement(tracker.icon, {
                     className: "w-7 h-7 text-white",
                   })}
-                </div>
-                <div className="absolute top-2 right-2 w-6 h-6 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
-                  <ChevronRight className="w-3 h-3 text-white" />
                 </div>
               </div>
 
