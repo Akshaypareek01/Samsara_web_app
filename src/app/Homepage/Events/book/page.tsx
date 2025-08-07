@@ -16,8 +16,8 @@ import {
   Star,
 } from "lucide-react";
 import { useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
-import { BASE_URL } from "@/lib/utils";
+import { useEffect, useState, Suspense } from "react";
+import { BASE_URL } from "../../../../lib/utils";
 import { getCookie } from "cookies-next";
 
 interface TeacherQualification {
@@ -93,7 +93,7 @@ interface UserProfile {
   images?: string[];
 }
 
-export default function EventsPage() {
+function EventsPageContent() {
   const searchParams = useSearchParams();
   const [eventDetails, setEventDetails] = useState<EventDetails | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
@@ -140,7 +140,7 @@ export default function EventsPage() {
     };
 
     fetchUserProfile();
-  }, [BASE_URL]);
+  }, []);
 
   useEffect(() => {
     const fetchEventDetails = async () => {
@@ -171,7 +171,7 @@ export default function EventsPage() {
     };
 
     fetchEventDetails();
-  }, [eventId, BASE_URL]);
+  }, [eventId]);
 
   // Register for event
   const handleRegister = async () => {
@@ -608,5 +608,13 @@ export default function EventsPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function EventsPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <EventsPageContent />
+    </Suspense>
   );
 }
