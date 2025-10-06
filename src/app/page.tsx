@@ -103,7 +103,7 @@ export default function Home() {
       setStep("success");
       toast.success("OTP verified successfully");
       setTimeout(() => {
-        router.push("/Homepage");
+        router.push("/Homepage/Classes");
       }, 3000);
     } catch {
       setError("Network error. Please try again.");

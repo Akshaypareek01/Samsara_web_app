@@ -5,4 +5,4 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
-export const BASE_URL = 'https://samsara-backend-v1.onrender.com/v1';
+export const BASE_URL = 'https://apis-samsarawellness.in/v1';

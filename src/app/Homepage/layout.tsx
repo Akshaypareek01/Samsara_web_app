@@ -130,7 +130,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             isActive={pathname === "/Homepage/Classes"}
             onClick={() => router.push("/Homepage/Classes")}
           />
-          <MenuItem
+          {/* <MenuItem
             icon={<Calendar size={18} />}
             label="Events"
             isActive={pathname.startsWith("/Homepage/Events")}
@@ -159,7 +159,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             label="Tracker"
             isActive={pathname === "/Homepage/Tracker"}
             onClick={() => router.push("/Homepage/Tracker")}
-          />
+          /> */}
         </nav>
       </aside>
 
@@ -187,12 +187,22 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             />
           </div>
           <div className="flex items-center gap-4 ml-4">
-            <Bell className="text-gray-500 cursor-pointer" size={20} />
+            {/* <Bell className="text-gray-500 cursor-pointer" size={20} /> */}
             <button
               className="bg-[#EB855F] text-white px-4 py-2 rounded-md text-sm hover:bg-orange-500 transition"
               onClick={() => router.push("/Homepage/Dashboard")}
             >
               Dashboard
+            </button>
+            <button
+              className="bg-gray-500 text-white px-4 py-2 rounded-md text-sm hover:bg-gray-600 transition"
+              onClick={() => {
+                Cookies.remove("accessToken");
+                Cookies.remove("user");
+                router.push("/");
+              }}
+            >
+              Logout
             </button>
           </div>
         </div>
