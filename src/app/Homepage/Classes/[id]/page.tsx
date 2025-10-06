@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { Calendar, User, Clock, ArrowLeft, Users, Star, X, MapPin } from "lucide-react";
+import { Calendar, User, Clock, ArrowLeft, Users, Star, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { getCookie } from "cookies-next";
 import { BASE_URL } from "@/lib/utils";
@@ -46,12 +46,37 @@ interface ClassData {
   students: string[];
 }
 
-export default function ClassDetailsPage({ params }: { params: { id: string } }) {
+export default function ClassDetailsPage({ params }: { params: Promise<{ id: string }> }) {
+  const [classId, setClassId] = useState<string | null>(null);
+
+  useEffect(() => {
+    params.then((resolvedParams) => {
+      setClassId(resolvedParams.id);
+    });
+  }, [params]);
+
+  if (!classId) {
+    return (
+      <div className="p-6 md:p-12 bg-white">
+        <div className="flex items-center justify-center h-64">
+          <div className="text-lg">Loading...</div>
+        </div>
+      </div>
+    );
+  }
+
+  return <ClassDetailsContent classId={classId} />;
+}
+
+function ClassDetailsContent({ classId }: { classId: string }) {
   const [classData, setClassData] = useState<ClassData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [joiningClass, setJoiningClass] = useState(false);
-  const [userProfile, setUserProfile] = useState<any>(null);
+  const [userProfile, setUserProfile] = useState<{
+    name?: string;
+    email?: string;
+  } | null>(null);
   const router = useRouter();
 
   useEffect(() => {
@@ -64,7 +89,7 @@ export default function ClassDetailsPage({ params }: { params: { id: string } })
           return;
         }
 
-        const response = await fetch(`${BASE_URL}/classes/${params.id}`, {
+        const response = await fetch(`${BASE_URL}/classes/${classId}`, {
           headers: {
             Authorization: `Bearer ${accessToken}`,
             "Content-Type": "application/json",
@@ -85,7 +110,7 @@ export default function ClassDetailsPage({ params }: { params: { id: string } })
     };
 
     fetchClassDetails();
-  }, [params.id]);
+  }, [classId]);
 
   // Fetch user profile
   useEffect(() => {
@@ -113,40 +138,6 @@ export default function ClassDetailsPage({ params }: { params: { id: string } })
     fetchUserProfile();
   }, []);
 
-  const handleWebZoomClassClick = () => {
-    console.log("Data details =====>");
-    
-    if (!classData) {
-      alert("Class data not available");
-      return;
-    }
-
-    // Check if meeting number exists
-    if (!classData.meeting_number) {
-      alert("Class Not Started");
-      return;
-    }
-
-    const ZoomMeetingNumber = {
-      number: classData.meeting_number,
-      pass: classData.password,
-      userName: userProfile?.name || "User",
-      email: userProfile?.email || "",
-    };
-
-    // Create the Zoom meeting URL
-    const zoomMeetingNumberString = JSON.stringify(ZoomMeetingNumber);
-    const queryParams = new URLSearchParams();
-    queryParams.append('ZoomMeetingNumber', zoomMeetingNumberString);
-    const queryString = queryParams.toString();
-    
-    const zoomUrl = `https://samsara-zoom-web-view.vercel.app/cdn?${queryString}`;
-    
-    console.log("Opening Zoom URL:", zoomUrl);
-    
-    // Open in new tab
-    window.open(zoomUrl, '_blank', 'noopener,noreferrer');
-  };
 
   const handleJoinClass = async () => {
     if (!classData) return;
@@ -282,7 +273,7 @@ export default function ClassDetailsPage({ params }: { params: { id: string } })
             {/* What You'll Gain */}
             {classData.whatYoullGain.length > 0 && (
               <div>
-                <h3 className="text-xl font-semibold mb-4">What You'll Gain</h3>
+                <h3 className="text-xl font-semibold mb-4">What You&apos;ll Gain</h3>
                 <ul className="space-y-3">
                   {classData.whatYoullGain.map((item, idx) => (
                     <li key={idx} className="flex items-start space-x-3">

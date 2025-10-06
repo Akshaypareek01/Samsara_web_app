@@ -5,11 +5,6 @@ import Image from "next/image";
 import {
   User,
   BookOpen,
-  Calendar,
-  Users,
-  User2,
-  Activity,
-  Bell,
   Search,
   Menu,
 } from "lucide-react";

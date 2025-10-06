@@ -7,12 +7,6 @@ import { getCookie } from "cookies-next";
 import { BASE_URL } from "@/lib/utils";
 import { useRouter } from "next/navigation";
 
-interface Participant {
-  id: string;
-  name: string;
-  profileImage?: string;
-}
-
 interface Attendance {
   id: string;
   classId: string;
@@ -90,7 +84,7 @@ interface ClassData {
 
 export default function MyClassesPage() {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
-  const [upcomingClasses, setUpcomingClasses] = useState<ClassData[]>([]);
+  // const [upcomingClasses, setUpcomingClasses] = useState<ClassData[]>([]);
   const [allClasses, setAllClasses] = useState<ClassData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -124,20 +118,20 @@ export default function MyClassesPage() {
         setUserProfile(profileData);
 
         // Fetch upcoming classes
-        const upcomingResponse = await fetch(
-          `${BASE_URL}/classes/student/${profileData.id}/classes/upcoming`,
-          {
-            headers: {
-              Authorization: `Bearer ${accessToken}`,
-              "Content-Type": "application/json",
-            },
-          }
-        );
+        // const upcomingResponse = await fetch(
+        //   `${BASE_URL}/classes/student/${profileData.id}/classes/upcoming`,
+        //   {
+        //     headers: {
+        //       Authorization: `Bearer ${accessToken}`,
+        //       "Content-Type": "application/json",
+        //     },
+        //   }
+        // );
 
-        if (upcomingResponse.ok) {
-          const upcomingData = await upcomingResponse.json();
-          setUpcomingClasses(upcomingData);
-        }
+        // if (upcomingResponse.ok) {
+        //   const upcomingData = await upcomingResponse.json();
+        //   setUpcomingClasses(upcomingData);
+        // }
 
         // Fetch all classes
         const allClassesResponse = await fetch(
@@ -229,30 +223,30 @@ export default function MyClassesPage() {
     },
   ];
 
-  const classItems = [
-    {
-      image: "/images/room4.svg",
-      title: "Upcoming Classes",
-      subtitle: `${upcomingClasses?.length || 0} Classes`,
-    },
-    {
-      image: "/images/room3.svg",
-      title: "Past Classes",
-      subtitle: `${
-        (allClasses?.length || 0) - (upcomingClasses?.length || 0)
-      } Classes`,
-    },
-    {
-      image: "/images/room2.svg",
-      title: "Favorites",
-      subtitle: `${userProfile?.favoriteClasses?.length || 0} Items`,
-    },
-    {
-      image: "/images/room1.svg",
-      title: "Class Wraps",
-      subtitle: `${userProfile?.classFeedback?.length || 0} Materials`,
-    },
-  ];
+  // const classItems = [
+  //   {
+  //     image: "/images/room4.svg",
+  //     title: "Upcoming Classes",
+  //     subtitle: `${upcomingClasses?.length || 0} Classes`,
+  //   },
+  //   {
+  //     image: "/images/room3.svg",
+  //     title: "Past Classes",
+  //     subtitle: `${
+  //       (allClasses?.length || 0) - (upcomingClasses?.length || 0)
+  //     } Classes`,
+  //   },
+  //   {
+  //     image: "/images/room2.svg",
+  //     title: "Favorites",
+  //     subtitle: `${userProfile?.favoriteClasses?.length || 0} Items`,
+  //   },
+  //   {
+  //     image: "/images/room1.svg",
+  //     title: "Class Wraps",
+  //     subtitle: `${userProfile?.classFeedback?.length || 0} Materials`,
+  //   },
+  // ];
 
   if (loading) {
     return (

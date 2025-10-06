@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft, Loader2 } from "lucide-react";
 
-export default function ZoomWebViewPage() {
+function ZoomWebViewContent() {
   const [url, setUrl] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -54,7 +54,7 @@ export default function ZoomWebViewPage() {
     console.log("WebView loaded successfully");
   };
 
-  const handleWebViewError = (error: any) => {
+  const handleWebViewError = (error: unknown) => {
     console.error("WebView error:", error);
     setError("Failed to load meeting. Please try again.");
   };
@@ -135,5 +135,20 @@ export default function ZoomWebViewPage() {
         sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox"
       />
     </div>
+  );
+}
+
+export default function ZoomWebViewPage() {
+  return (
+    <Suspense fallback={
+      <div className="fixed inset-0 bg-white flex items-center justify-center z-50">
+        <div className="text-center">
+          <Loader2 className="w-8 h-8 animate-spin text-orange-500 mx-auto mb-4" />
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    }>
+      <ZoomWebViewContent />
+    </Suspense>
   );
 }
