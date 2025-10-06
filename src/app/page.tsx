@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useState, useEffect, useRef } from "react";
-import { MailIcon, UserIcon } from "lucide-react";
+import { MailIcon } from "lucide-react";
 import Lottie from "lottie-react";
 import successAnimation from "./sucess.json";
 import { useRouter } from "next/navigation";
@@ -11,7 +11,6 @@ import Cookies from "js-cookie";
 import { BASE_URL } from "@/lib/utils";
 
 export default function Home() {
-  const [role, setRole] = useState("Student");
   const [step, setStep] = useState("signin");
   const [verificationCode, setVerificationCode] = useState(Array(4).fill(""));
   const [email, setEmail] = useState("");
@@ -188,36 +187,6 @@ export default function Home() {
               <h2 className="auth-title">Sign In to Samsara</h2>
               <p className="auth-subtitle">Continue your wellness journey</p>
 
-              <div className="role-switch">
-                {["Student", "Wellness Coach"].map((item) => (
-                  <button
-                    key={item}
-                    onClick={() => setRole(item)}
-                    className={`role-button ${
-                      role === item ? "role-active" : ""
-                    }`}
-                  >
-                    <div
-                      className={`role-icon ${
-                        role === item ? "active-icon" : ""
-                      }`}
-                    >
-                      <UserIcon
-                        className={
-                          role === item ? "icon-active" : "icon-inactive"
-                        }
-                      />
-                    </div>
-                    <span
-                      className={`role-text ${
-                        role === item ? "text-active" : ""
-                      }`}
-                    >
-                      {item}
-                    </span>
-                  </button>
-                ))}
-              </div>
 
               <div className="email-input">
                 <span className="email-icon">
