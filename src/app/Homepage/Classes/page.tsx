@@ -1,11 +1,11 @@
 "use client";
 
-import Image from "next/image";
-import { Calendar, User, Clock } from "lucide-react";
 import { useEffect, useState } from "react";
 import { getCookie } from "cookies-next";
 import { BASE_URL } from "@/lib/utils";
 import { useRouter } from "next/navigation";
+import axios from "axios";
+import { ClassCard, EventCard, StatsSection, TabNavigation } from "./components";
 
 interface Attendance {
   id: string;
@@ -82,14 +82,74 @@ interface ClassData {
   students: string[];
 }
 
+interface EventData {
+  _id: string;
+  eventName: string;
+  details: string;
+  type: string;
+  level: string;
+  startDate: string;
+  startTime: string;
+  availableseats: string;
+  location: string;
+  image: string;
+  status: boolean;
+  meeting_number: string;
+  password: string;
+  teacher: {
+    _id: string;
+    name: string;
+    email: string;
+    teacherCategory: string;
+    expertise: string[];
+    profileImage: string;
+    AboutMe: string;
+    gender: string;
+    age: string;
+    status: boolean;
+    active: boolean;
+  };
+  eventmode: string;
+  whoitsfor: string;
+  whoitsnotfor: string;
+  howItWillHelp: string;
+  howItWillnotHelp: string;
+  students: Array<{
+    _id: string;
+    email: string;
+    name: string;
+  }>;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export default function MyClassesPage() {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
-  // const [upcomingClasses, setUpcomingClasses] = useState<ClassData[]>([]);
   const [allClasses, setAllClasses] = useState<ClassData[]>([]);
+  const [userEvents, setUserEvents] = useState<EventData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [joiningClass, setJoiningClass] = useState<string | null>(null);
+  const [joiningEvent, setJoiningEvent] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<'classes' | 'events'>('classes');
   const router = useRouter();
+
+  // Get user's applied events
+  const getUserAppliedEvents = async (userId: string) => {
+    try {
+      const accessToken = getCookie("accessToken");
+      const response = await axios.get(`${BASE_URL}/events/user-events/${userId}/upcoming`, {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+        },
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching user applied events:', error);
+      throw error;
+    }
+  };
 
   useEffect(() => {
     const fetchData = async () => {
@@ -148,6 +208,15 @@ export default function MyClassesPage() {
           const allClassesData = await allClassesResponse.json();
           setAllClasses(allClassesData.data || allClassesData);
         }
+
+        // Fetch user events
+        try {
+          const eventsData = await getUserAppliedEvents(profileData.id) as { events?: EventData[] };
+          setUserEvents(eventsData.events || []);
+        } catch (eventsError) {
+          console.error('Error fetching events:', eventsError);
+          // Don't set error for events, just log it
+        }
       } catch (err) {
         setError(err instanceof Error ? err.message : "An error occurred");
       } finally {
@@ -201,27 +270,57 @@ export default function MyClassesPage() {
     }
   };
 
+  const handleJoinEvent = async (eventId: string) => {
+    setJoiningEvent(eventId);
+    
+    try {
+      // Find the event data to get meeting details
+      const eventData = userEvents.find(event => event._id === eventId);
+      
+      if (!eventData) {
+        alert("Event data not found");
+        setJoiningEvent(null);
+        return;
+      }
+
+      // Check if meeting number exists
+      if (!eventData.meeting_number) {
+        alert("Event Not Started - No meeting number available");
+        setJoiningEvent(null);
+        return;
+      }
+
+      // Create Zoom meeting URL
+      const ZoomMeetingNumber = {
+        number: eventData.meeting_number,
+        pass: eventData.password || "",
+        userName: userProfile?.name || "User",
+        email: userProfile?.email || "",
+      };
+
+      console.log("Event Data ===>", ZoomMeetingNumber);
+      
+      const zoomMeetingNumberString = JSON.stringify(ZoomMeetingNumber);
+      
+      // Navigate to webview page with meeting data
+      router.push(`/Homepage/ZoomWebView?ZoomMeetingNumber=${encodeURIComponent(zoomMeetingNumberString)}`);
+      
+    } catch (error) {
+      console.error("Error joining event:", error);
+      alert("Error opening event. Please try again.");
+    } finally {
+      setJoiningEvent(null);
+    }
+  };
+
   const handleViewDetails = (classId: string) => {
     router.push(`/Homepage/Classes/${classId}`);
   };
 
-  const stats = [
-    {
-      icon: <Calendar className="w-6 h-6 text-[#F38A6A]" />,
-      value: (allClasses?.length || 0).toString(),
-      label: "Classes Booked",
-    },
-    {
-      icon: <User className="w-6 h-6 text-[#F38A6A]" />,
-      value: (userProfile?.attendance?.length || 0).toString(),
-      label: "Classes Attended",
-    },
-    {
-      icon: <Clock className="w-6 h-6 text-[#F38A6A]" />,
-      value: "36", // This could be calculated from class durations
-      label: "Total Hours",
-    },
-  ];
+  const handleViewEventDetails = (eventId: string) => {
+    router.push(`/Homepage/Events/${eventId}`);
+  };
+
 
   // const classItems = [
   //   {
@@ -274,20 +373,10 @@ export default function MyClassesPage() {
       <p className="text-gray-500 mb-6">Track your learning progress</p>
 
       {/* Stats Section */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-10">
-        {stats.map((item, idx) => (
-          <div
-            key={idx}
-            className="bg-white shadow-sm rounded-xl p-4 flex items-center space-x-4 border border-gray-100"
-          >
-            <div className="bg-[#F38A6A]/10 rounded-full p-2">{item.icon}</div>
-            <div>
-              <h2 className="text-xl font-semibold">{item.value}</h2>
-              <p className="text-gray-500 text-sm">{item.label}</p>
-            </div>
-          </div>
-        ))}
-      </div>
+      <StatsSection 
+        classesCount={allClasses?.length || 0} 
+        eventsCount={userEvents?.length || 0} 
+      />
 
       {/* Class Boxes */}
       {/* <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -312,106 +401,58 @@ export default function MyClassesPage() {
       </div> */}
 
       <div className="mt-12">
-        <h2 className="text-2xl font-semibold mb-6">My Classes</h2>
-        {(allClasses?.length || 0) === 0 ? (
-          <div className="text-center py-8">
-            <p className="text-gray-500">No classes booked yet</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-6">
-            {(allClasses || []).map((classItem, index) => (
-              <div
-                key={classItem._id || index}
-                className="bg-white rounded-xl border border-gray-100 shadow-sm p-5 flex flex-col justify-between space-y-4"
-              >
-                {/* Class Image */}
-                <div className="relative">
-                  <Image
-                    src={classItem.image}
-                    alt={classItem.title}
-                    width={400}
-                    height={200}
-                    className="w-full h-40 object-cover rounded-lg"
-                  />
-                  <span className="absolute top-2 right-2 text-xs px-2 py-1 bg-white/90 text-gray-700 rounded-full">
-                    {classItem.classType}
-                  </span>
-                </div>
+        {/* Tab Navigation */}
+        <TabNavigation
+          activeTab={activeTab}
+          onTabChange={setActiveTab}
+          classesCount={allClasses?.length || 0}
+          eventsCount={userEvents?.length || 0}
+        />
 
-                {/* Header */}
-                <div className="flex justify-between items-start">
-                  <div>
-                    <h3 className="font-semibold text-[16px] text-gray-900">
-                      {classItem.title}
-                    </h3>
-                    <p className="text-sm text-gray-500 mt-1">{classItem.description}</p>
-                    <div className="flex items-center space-x-2 text-sm text-gray-500 mt-2">
-                      <User className="w-4 h-4 text-gray-400" />
-                      <span>{classItem.teacher.name}</span>
-                      <span className="text-gray-300">•</span>
-                      <span>{classItem.teacher.teacherCategory}</span>
-                    </div>
-                  </div>
-                  <span className={`text-xs px-3 py-1 rounded-full ${
-                    classItem.status 
-                      ? 'bg-green-100 text-green-600' 
-                      : 'bg-gray-100 text-gray-600'
-                  }`}>
-                    {classItem.status ? 'Active' : 'Inactive'}
-                  </span>
-                </div>
-
-                {/* Class Details */}
-                <div className="text-sm text-gray-600 space-y-2">
-                  <div className="flex items-center space-x-2">
-                    <Clock className="w-4 h-4 text-orange-500" />
-                    <span>{classItem.duration} minutes</span>
-                    <span className="text-gray-300">•</span>
-                    <span>Max {classItem.maxCapacity} students</span>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Calendar className="w-4 h-4 text-orange-500" />
-                    <span>{classItem.schedules[0]?.days.join(', ')}</span>
-                    <span className="text-gray-300">•</span>
-                    <span>{classItem.schedules[0]?.startTime} - {classItem.schedules[0]?.endTime}</span>
-                  </div>
-                  <div className="flex flex-wrap gap-1 mt-2">
-                    {classItem.level.map((level, idx) => (
-                      <span key={idx} className="text-xs px-2 py-1 bg-orange-100 text-orange-600 rounded-full">
-                        {level}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Action Buttons */}
-                <div className="flex justify-between items-center pt-2">
-                  <div className="flex items-center space-x-2">
-                    <span className="text-sm text-gray-500">
-                      {classItem.students.length} enrolled
-                    </span>
-                  </div>
-                  <div className="flex space-x-2">
-                    <button 
-                      onClick={() => handleViewDetails(classItem._id)}
-                      className="text-sm text-orange-500 font-medium hover:underline"
-                    >
-                      View Details
-                    </button>
-                    {classItem.status && (
-                      <button 
-                        onClick={() => handleJoinClass(classItem._id)}
-                        disabled={joiningClass === classItem._id}
-                        className="bg-orange-500 text-white px-4 py-2 rounded-md text-sm hover:bg-orange-600 transition disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        {joiningClass === classItem._id ? "Joining..." : "Join Class"}
-                      </button>
-                    )}
-                  </div>
-                </div>
+        {/* Classes Tab */}
+        {activeTab === 'classes' && (
+          <>
+            {(allClasses?.length || 0) === 0 ? (
+              <div className="text-center py-8">
+                <p className="text-gray-500">No classes booked yet</p>
               </div>
-            ))}
-          </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-6">
+                {(allClasses || []).map((classItem, index) => (
+                  <ClassCard
+                    key={classItem._id || index}
+                    classItem={classItem}
+                    joiningClass={joiningClass}
+                    onJoinClass={handleJoinClass}
+                    onViewDetails={handleViewDetails}
+                  />
+                ))}
+              </div>
+            )}
+          </>
+        )}
+
+        {/* Events Tab */}
+        {activeTab === 'events' && (
+          <>
+            {(userEvents?.length || 0) === 0 ? (
+              <div className="text-center py-8">
+                <p className="text-gray-500">No events booked yet</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-6">
+                {(userEvents || []).map((eventItem, index) => (
+                  <EventCard
+                    key={eventItem._id || index}
+                    eventItem={eventItem}
+                    joiningEvent={joiningEvent}
+                    onJoinEvent={handleJoinEvent}
+                    onViewDetails={handleViewEventDetails}
+                  />
+                ))}
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>
