@@ -5,7 +5,6 @@ import Image from "next/image";
 import {
   User,
   BookOpen,
-  Search,
   Menu,
 } from "lucide-react";
 import { useRouter, usePathname } from "next/navigation";
@@ -91,6 +90,16 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               />
               <h2 className="font-semibold text-[16px]">{user.name}</h2>
               <p className="text-gray-500 text-sm">{user.email}</p>
+              <button
+                className="bg-gray-500 text-white px-3 py-1 rounded-md text-xs hover:bg-gray-600 transition mt-2"
+                onClick={() => {
+                  Cookies.remove("accessToken");
+                  Cookies.remove("user");
+                  router.push("/");
+                }}
+              >
+                Logout
+              </button>
             </>
           ) : (
             <>
@@ -170,7 +179,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Top bar */}
         <div className="hidden md:flex items-center justify-between px-6 py-3 bg-[#fdf4f2] mt-8">
-          <div className="relative w-full max-w-md">
+          {/* <div className="relative w-full max-w-md">
             <Search
               className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
               size={18}
@@ -182,24 +191,13 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             />
           </div>
           <div className="flex items-center gap-4 ml-4">
-            {/* <Bell className="text-gray-500 cursor-pointer" size={20} /> */}
             <button
               className="bg-[#EB855F] text-white px-4 py-2 rounded-md text-sm hover:bg-orange-500 transition"
               onClick={() => router.push("/Homepage/Dashboard")}
             >
               Dashboard
             </button>
-            <button
-              className="bg-gray-500 text-white px-4 py-2 rounded-md text-sm hover:bg-gray-600 transition"
-              onClick={() => {
-                Cookies.remove("accessToken");
-                Cookies.remove("user");
-                router.push("/");
-              }}
-            >
-              Logout
-            </button>
-          </div>
+          </div> */}
         </div>
 
         {/* Scrollable content */}
