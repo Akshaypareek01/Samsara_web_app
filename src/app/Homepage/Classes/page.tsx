@@ -349,9 +349,10 @@ export default function MyClassesPage() {
 
   if (loading) {
     return (
-      <div className="p-6 md:p-12 bg-white">
-        <div className="flex items-center justify-center h-64">
-          <div className="text-lg">Loading...</div>
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500 mx-auto mb-4"></div>
+          <div className="text-gray-600">Loading...</div>
         </div>
       </div>
     );
@@ -359,101 +360,104 @@ export default function MyClassesPage() {
 
   if (error) {
     return (
-      <div className="p-6 md:p-12 bg-white">
-        <div className="flex items-center justify-center h-64">
-          <div className="text-lg text-red-500">Error: {error}</div>
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
+        <div className="text-center max-w-md">
+          <div className="text-red-500 mb-4">
+            <svg className="mx-auto h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+            </svg>
+          </div>
+          <div className="text-red-600 font-medium mb-2">Error</div>
+          <div className="text-gray-600 text-sm">{error}</div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="p-6 md:p-12 bg-white">
-      <h1 className="text-2xl md:text-3xl font-semibold mb-2">My Classes</h1>
-      <p className="text-gray-500 mb-6">Track your learning progress</p>
+    <div className="min-h-screen bg-gray-50">
+      <div className="px-4 py-6 sm:px-6 lg:px-8 max-w-7xl mx-auto">
+        {/* Header */}
+        <div className="mb-6 sm:mb-8">
+          <h1 className="text-xl sm:text-2xl lg:text-3xl font-semibold text-gray-900 mb-2">
+            My Classes
+          </h1>
+          <p className="text-sm sm:text-base text-gray-600">
+            Track your learning progress
+          </p>
+        </div>
 
-      {/* Stats Section */}
-      <StatsSection 
-        classesCount={allClasses?.length || 0} 
-        eventsCount={userEvents?.length || 0} 
-      />
-
-      {/* Class Boxes */}
-      {/* <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {classItems.map((item, idx) => (
-          <div
-            key={idx}
-            className="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-100"
-          >
-            <Image
-              src={item.image}
-              alt={item.title}
-              width={500}
-              height={300}
-              className="w-full h-40 object-cover"
-            />
-            <div className="p-4 text-center">
-              <h2 className="font-semibold text-lg">{item.title}</h2>
-              <p className="text-gray-500 text-sm mt-1">{item.subtitle}</p>
-            </div>
-          </div>
-        ))}
-      </div> */}
-
-      <div className="mt-12">
-        {/* Tab Navigation */}
-        <TabNavigation
-          activeTab={activeTab}
-          onTabChange={setActiveTab}
-          classesCount={allClasses?.length || 0}
-          eventsCount={userEvents?.length || 0}
+        {/* Stats Section */}
+        <StatsSection 
+          classesCount={allClasses?.length || 0} 
+          eventsCount={userEvents?.length || 0} 
         />
 
-        {/* Classes Tab */}
-        {activeTab === 'classes' && (
-          <>
-            {(allClasses?.length || 0) === 0 ? (
-              <div className="text-center py-8">
-                <p className="text-gray-500">No classes booked yet</p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-6">
-                {(allClasses || []).map((classItem, index) => (
-                  <ClassCard
-                    key={classItem._id || index}
-                    classItem={classItem}
-                    joiningClass={joiningClass}
-                    onJoinClass={handleJoinClass}
-                    onViewDetails={handleViewDetails}
-                  />
-                ))}
-              </div>
-            )}
-          </>
-        )}
+        <div className="mt-8 sm:mt-12">
+          {/* Tab Navigation */}
+          <TabNavigation
+            activeTab={activeTab}
+            onTabChange={setActiveTab}
+            classesCount={allClasses?.length || 0}
+            eventsCount={userEvents?.length || 0}
+          />
 
-        {/* Events Tab */}
-        {activeTab === 'events' && (
-          <>
-            {(userEvents?.length || 0) === 0 ? (
-              <div className="text-center py-8">
-                <p className="text-gray-500">No events booked yet</p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-6">
-                {(userEvents || []).map((eventItem, index) => (
-                  <EventCard
-                    key={eventItem._id || index}
-                    eventItem={eventItem}
-                    joiningEvent={joiningEvent}
-                    onJoinEvent={handleJoinEvent}
-                    onViewDetails={handleViewEventDetails}
-                  />
-                ))}
-              </div>
-            )}
-          </>
-        )}
+          {/* Classes Tab */}
+          {activeTab === 'classes' && (
+            <>
+              {(allClasses?.length || 0) === 0 ? (
+                <div className="text-center py-12 sm:py-16">
+                  <div className="text-gray-400 mb-4">
+                    <svg className="mx-auto h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                    </svg>
+                  </div>
+                  <p className="text-gray-500 text-sm sm:text-base">No classes booked yet</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6">
+                  {(allClasses || []).map((classItem, index) => (
+                    <ClassCard
+                      key={classItem._id || index}
+                      classItem={classItem}
+                      joiningClass={joiningClass}
+                      onJoinClass={handleJoinClass}
+                      onViewDetails={handleViewDetails}
+                    />
+                  ))}
+                </div>
+              )}
+            </>
+          )}
+
+          {/* Events Tab */}
+          {activeTab === 'events' && (
+            <>
+              {(userEvents?.length || 0) === 0 ? (
+                <div className="text-center py-12 sm:py-16">
+                  <div className="text-gray-400 mb-4">
+                    <svg className="mx-auto h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                  </div>
+                  <p className="text-gray-500 text-sm sm:text-base">No events booked yet</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6">
+                  {(userEvents || []).map((eventItem, index) => (
+                    <EventCard
+                      key={eventItem._id || index}
+                      eventItem={eventItem}
+                      joiningEvent={joiningEvent}
+                      onJoinEvent={handleJoinEvent}
+                      onViewDetails={handleViewEventDetails}
+                    />
+                  ))}
+                </div>
+              )}
+            </>
+          )}
+        </div>
       </div>
     </div>
   );

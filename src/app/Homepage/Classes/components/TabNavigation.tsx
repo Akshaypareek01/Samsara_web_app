@@ -14,26 +14,30 @@ export default function TabNavigation({
   eventsCount 
 }: TabNavigationProps) {
   return (
-    <div className="flex space-x-1 mb-6">
+    <div className="flex space-x-1 mb-4 sm:mb-6 bg-gray-100 p-1 rounded-lg">
       <button
         onClick={() => onTabChange('classes')}
-        className={`px-6 py-3 text-sm font-medium rounded-lg transition-colors ${
+        className={`flex-1 px-3 sm:px-6 py-2 sm:py-3 text-xs sm:text-sm font-medium rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 ${
           activeTab === 'classes'
-            ? 'bg-orange-500 text-white'
-            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+            ? 'bg-white text-orange-600 shadow-sm'
+            : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
         }`}
       >
-        Classes ({classesCount})
+        <span className="block sm:hidden">Classes</span>
+        <span className="hidden sm:block">Classes ({classesCount})</span>
+        <span className="block sm:hidden text-xs text-gray-400">({classesCount})</span>
       </button>
       <button
         onClick={() => onTabChange('events')}
-        className={`px-6 py-3 text-sm font-medium rounded-lg transition-colors ${
+        className={`flex-1 px-3 sm:px-6 py-2 sm:py-3 text-xs sm:text-sm font-medium rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 ${
           activeTab === 'events'
-            ? 'bg-orange-500 text-white'
-            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+            ? 'bg-white text-orange-600 shadow-sm'
+            : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
         }`}
       >
-        Events ({eventsCount})
+        <span className="block sm:hidden">Events</span>
+        <span className="hidden sm:block">Events ({eventsCount})</span>
+        <span className="block sm:hidden text-xs text-gray-400">({eventsCount})</span>
       </button>
     </div>
   );

@@ -187,7 +187,6 @@ export default function Home() {
               <h2 className="auth-title">Sign In to Samsara</h2>
               <p className="auth-subtitle">Continue your wellness journey</p>
 
-
               <div className="email-input">
                 <span className="email-icon">
                   <MailIcon />
@@ -199,15 +198,21 @@ export default function Home() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   disabled={loading}
+                  autoComplete="email"
+                  autoCapitalize="none"
+                  autoCorrect="off"
                 />
               </div>
               {error && (
-                <div style={{ color: "red", marginBottom: 8 }}>{error}</div>
+                <div className="text-red-500 text-sm text-center mb-4 px-4">
+                  {error}
+                </div>
               )}
               <button
                 onClick={handleSignIn}
                 className="signin-button"
                 disabled={loading}
+                type="button"
               >
                 {loading ? "Sending..." : "Sign In"}
               </button>
@@ -218,7 +223,7 @@ export default function Home() {
             <div className="verification-container animate-fadeIn">
               <h2 className="auth-title">Verification Code</h2>
               <p className="auth-subtitle">
-                We have sent the verification code to your email address
+                We&apos;ve sent a verification code to {email}
               </p>
 
               <div className="code-container">
@@ -237,16 +242,28 @@ export default function Home() {
                 ))}
               </div>
               {error && (
-                <div style={{ color: "red", marginBottom: 8 }}>{error}</div>
+                <div className="text-red-500 text-sm text-center mb-4 px-4">
+                  {error}
+                </div>
               )}
               <button
                 onClick={handleVerify}
                 className="verify-button"
-                style={{ position: "relative", bottom: "25px" }}
-                disabled={loading}
+                disabled={loading || verificationCode.some(digit => !digit)}
+                type="button"
               >
-                {loading ? "Verifying..." : "Continue"}
+                {loading ? "Verifying..." : "Verify Code"}
               </button>
+              
+              <div className="text-center mt-4">
+                <button
+                  onClick={() => setStep("signin")}
+                  className="text-sm text-gray-500 hover:text-gray-700 underline"
+                  type="button"
+                >
+                  Back to Sign In
+                </button>
+              </div>
             </div>
           )}
 
@@ -257,9 +274,8 @@ export default function Home() {
               </div>
               <div className="success-text-container">
                 <h2 className="success-title">Success!</h2>
-                <p className="success-message">
-                  Congratulations! You have been <br />
-                  successfully authenticated
+                <p className="success-subtitle">
+                  Congratulations! You have been successfully authenticated
                 </p>
               </div>
             </div>

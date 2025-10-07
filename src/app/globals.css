@@ -25,6 +25,29 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
+/* Utility Classes */
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 
 /* Global CSS */
 .auth-container {
@@ -132,10 +155,16 @@ body {
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  padding: 32px 16px;
+  padding: 16px;
   background-color: #fff;
   position: relative;
   min-height: 100vh;
+}
+
+@media (min-width: 640px) {
+  .right-side {
+    padding: 32px 16px;
+  }
 }
 
 .success-bg {
@@ -148,86 +177,126 @@ body {
   position: relative;
 }
 
+@media (max-width: 640px) {
+  .auth-content {
+    max-width: 100%;
+    padding: 0 8px;
+  }
+}
+
 /* Logo Styles */
 .logo-container {
   display: flex;
   justify-content: center;
   align-items: center;
   gap: 8px;
-  margin-bottom: 32px;
+  margin-bottom: 24px;
+}
+
+@media (min-width: 640px) {
+  .logo-container {
+    margin-bottom: 32px;
+  }
 }
 
 .logo-wrapper {
-  width: 40px;
-  height: 40px;
+  width: 32px;
+  height: 32px;
   position: relative;
+}
+
+@media (min-width: 640px) {
+  .logo-wrapper {
+    width: 40px;
+    height: 40px;
+  }
 }
 
 .logo-image {
   object-fit: contain;
 }
 
-
-
 .logo-text {
-  font-size: 20px;
+  font-size: 18px;
   font-weight: 600;
   color: #6b7280;
   letter-spacing: 0.5px;
+}
+
+@media (min-width: 640px) {
+  .logo-text {
+    font-size: 20px;
+  }
 }
 
 /* Auth Content Styles */
 .auth-title {
   text-align: center;
   font-weight: bold;
-  font-size: 9vw;
-  position: relative;
-  bottom: 2vw;
+  font-size: 7vw;
   color: #1f2937;
+  margin-bottom: 8px;
+}
+
+@media (min-width: 640px) {
+  .auth-title {
+    font-size: 9vw;
+    margin-bottom: 16px;
+  }
 }
 
 .auth-subtitle {
   text-align: center;
   color: #6b7280;
-  margin-bottom: 32px;
-  font-size: 0.9rem;
-  position: relative;
+  margin-bottom: 24px;
+  font-size: 0.85rem;
   font-weight: bold;
-  bottom: 1vw;
+}
 
-  white-space: nowrap;         /* Prevents line break */
-  overflow: hidden;            /* Hides overflow if needed */
-  
-  width: 100%;                 /* Stretch across container */
-  max-width: 600px;            /* Set a limit for large screens */
-  margin-left: auto;
-  margin-right: auto;
+@media (min-width: 640px) {
+  .auth-subtitle {
+    margin-bottom: 32px;
+    font-size: 0.9rem;
+  }
 }
 
 
 
-/* Email Input Styles */
 /* Email Input Styles */
 .email-input {
   position: relative;
-  margin-bottom: 24px;
+  margin-bottom: 20px;
   display: flex;
-  justify-content: center; /* Center the input */
-  width: 100%; /* Take full width of container */
+  justify-content: center;
+  width: 100%;
+}
+
+@media (min-width: 640px) {
+  .email-input {
+    margin-bottom: 24px;
+  }
 }
 
 .email-field {
-  width: 100%; /* Take full available width */
-  max-width: 400px; /* Set a maximum width */
-  border-radius: 14px;
+  width: 100%;
+  max-width: 400px;
+  border-radius: 12px;
   border: 1px solid #e5e7eb;
   background-color: #fff;
-  padding: 12px 16px 12px 48px;
+  padding: 14px 16px 14px 48px;
   color: #6b7280;
-  font-size: 14px;
+  font-size: 16px;
   outline: none;
   transition: all 0.2s ease;
-  box-sizing: border-box; 
+  box-sizing: border-box;
+}
+
+@media (min-width: 640px) {
+  .email-field {
+    border-radius: 14px;
+    padding: 12px 16px 12px 48px;
+    font-size: 14px;
+  }
 }
 
 .email-icon {
@@ -250,20 +319,35 @@ body {
   width: 100%;
   background-color: #EB855F;
   color: white;
-   border-radius: 14px;
+  border-radius: 12px;
   border: none;
   font-weight: 500;
-  font-size: 14px;
+  font-size: 16px;
   cursor: pointer;
   transition: all 0.2s ease;
   box-shadow: 0 1px 2px rgba(0,0,0,0.05);
   justify-content: center;
-  height: 8vh;
+  height: 48px;
+  min-height: 48px;
+}
+
+@media (min-width: 640px) {
+  .signin-button, .verify-button {
+    border-radius: 14px;
+    font-size: 14px;
+    height: 8vh;
+    min-height: 44px;
+  }
 }
 
 .signin-button:hover, .verify-button:hover {
   background-color: #ea580c;
   box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+
+.signin-button:disabled, .verify-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 /* Verification Code Styles */
@@ -274,21 +358,36 @@ body {
 .code-container {
   display: flex;
   justify-content: center;
-  gap: 12px;
-  margin-bottom: 32px;
-  position: relative;
-  bottom: 30px;
+  gap: 8px;
+  margin-bottom: 24px;
+}
+
+@media (min-width: 640px) {
+  .code-container {
+    gap: 12px;
+    margin-bottom: 32px;
+  }
 }
 
 .code-input {
-  width: 4vw;
-  height: 8vh;
+  width: 48px;
+  height: 48px;
   text-align: center;
-  font-size: 20px;
-  border: 2.2px solid #e5e7eb;
-  border-radius: 12px;
+  font-size: 18px;
+  border: 2px solid #e5e7eb;
+  border-radius: 8px;
   outline: none;
   transition: all 0.2s ease;
+}
+
+@media (min-width: 640px) {
+  .code-input {
+    width: 4vw;
+    height: 8vh;
+    font-size: 20px;
+    border-radius: 12px;
+    border-width: 2.2px;
+  }
 }
 
 .code-input:focus {
@@ -322,11 +421,31 @@ body {
 }
 
 .success-title {
-  font-size: 32px;
+  font-size: 24px;
   font-weight: 700;
-  margin-bottom: 12px;
   color: #1f2937;
+  margin-bottom: 8px;
   text-align: center;
+}
+
+@media (min-width: 640px) {
+  .success-title {
+    font-size: 32px;
+    margin-bottom: 12px;
+  }
+}
+
+.success-subtitle {
+  font-size: 14px;
+  color: #6b7280;
+  text-align: center;
+  line-height: 1.5;
+}
+
+@media (min-width: 640px) {
+  .success-subtitle {
+    font-size: 16px;
+  }
 }
 
 .success-message {
