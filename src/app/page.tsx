@@ -147,9 +147,9 @@ export default function Home() {
         <div className="content-section">
           <div className="content-wrapper">
             <h1 className="welcome-heading">
-              <span className="heading-top">Welcome to Your Wellness</span>
-              <br />
-              <span className="heading-bottom">Journey</span>
+              <span className="heading-top">Welcome to Your </span>
+           
+              <span className="heading-bottom">Wellness Journey</span>
             </h1>
 
             <p className="welcome-description">
@@ -169,23 +169,20 @@ export default function Home() {
       >
         <div className="auth-content">
           {step !== "success" && (
-            <div className="logo-container">
-              <div className="logo-wrapper">
-                <Image
-                  src="/images/logo.svg"
+              <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+              <Image
+                  src="/images/SamsaraLogo.png"
                   alt="Samsara Logo"
-                  fill
-                  className="logo-image"
+                  width={200}
+                  height={200}
                 />
               </div>
-              <span className="logo-text">SAMSARA</span>
-            </div>
           )}
 
           {step === "signin" && (
             <>
-              <h2 className="auth-title">Sign In to Samsara</h2>
-              <p className="auth-subtitle">Continue your wellness journey</p>
+              {/* <h2 className="auth-title">Sign In to Samsara</h2> */}
+              <p className="auth-subtitle" style={{marginTop:"20px"}}>Continue your wellness journey</p>
 
               <div className="email-input">
                 <span className="email-icon">
