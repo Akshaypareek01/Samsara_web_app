@@ -119,16 +119,6 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
         {/* Navigation */}
         <nav className="mt-10 space-y-3 text-gray-700 text-sm">
-          {/* Conditionally show Profile section only for teachers */}
-          {user && user.role === "teacher" && (
-            <MenuItem
-              icon={<User size={18} />}
-              label="Profile"
-              isActive={pathname === "/Homepage/Profile"}
-              onClick={() => router.push("/Homepage/Profile")}
-            />
-          )}
-
           {user && user.role === "teacher" && (
             <MenuItem
               icon={<Calendar size={18} />}
