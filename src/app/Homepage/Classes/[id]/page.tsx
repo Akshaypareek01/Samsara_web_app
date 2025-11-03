@@ -1,11 +1,12 @@
 "use client";
 
 import Image from "next/image";
-import { Calendar, User, Clock, ArrowLeft, Users, Star, X } from "lucide-react";
+import { Calendar, User, Clock, ArrowLeft, Users, Star, X, Play, Square, Trash2, ExternalLink } from "lucide-react";
 import { useEffect, useState } from "react";
 import { getCookie } from "cookies-next";
 import { BASE_URL } from "@/lib/utils";
 import { useRouter } from "next/navigation";
+import axios from "axios";
 
 interface ClassData {
   _id: string;
@@ -23,7 +24,8 @@ interface ClassData {
   whatYoullGain: string[];
   meeting_number?: string;
   password?: string;
-  teacher: {
+  zoomAccountUsed?: string;
+  teacher: string | {
     _id: string;
     name: string;
     email: string;
@@ -73,9 +75,12 @@ function ClassDetailsContent({ classId }: { classId: string }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [joiningClass, setJoiningClass] = useState(false);
+  const [loadingAction, setLoadingAction] = useState<string | null>(null);
   const [userProfile, setUserProfile] = useState<{
+    id?: string;
     name?: string;
     email?: string;
+    role?: string;
   } | null>(null);
   const router = useRouter();
 
@@ -139,6 +144,164 @@ function ClassDetailsContent({ classId }: { classId: string }) {
   }, []);
 
 
+  // Check if current user is the teacher who created this class
+  const isClassCreator = () => {
+    if (!userProfile || !classData) {
+      console.log("Missing data:", { userProfile: !!userProfile, classData: !!classData });
+      return false;
+    }
+    if (userProfile.role !== "teacher") {
+      console.log("User role is not teacher:", userProfile.role);
+      return false;
+    }
+    
+    const teacherId = typeof classData.teacher === "string" 
+      ? classData.teacher 
+      : classData.teacher._id;
+    console.log("teacherId ===>", teacherId);
+    console.log("userProfile.id ===>", userProfile.id);
+    const isCreator = userProfile.id === teacherId;
+    console.log("isClassCreator result:", isCreator);
+    return isCreator;
+  };
+
+  const handleStartClass = async () => {
+    if (!classData) return;
+    setLoadingAction("start");
+    
+    try {
+      const accessToken = getCookie("accessToken");
+      if (!accessToken) {
+        alert("Authentication required");
+        return;
+      }
+
+      const response = await axios.post(
+        `${BASE_URL}/classes/start-meeting/${classData._id}`,
+        {},
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (response.data) {
+        // Refresh class data
+        const refreshResponse = await fetch(`${BASE_URL}/classes/${classId}`, {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            "Content-Type": "application/json",
+          },
+        });
+        if (refreshResponse.ok) {
+          const data = await refreshResponse.json();
+          setClassData(data.data || data);
+        }
+        alert("Class meeting started successfully!");
+      }
+    } catch (error: any) {
+      console.error("Error starting class:", error);
+      alert(
+        error.response?.data?.message ||
+          "Failed to start class meeting. Please try again."
+      );
+    } finally {
+      setLoadingAction(null);
+    }
+  };
+
+  const handleEndMeeting = async () => {
+    if (!classData) return;
+    if (!confirm("Are you sure you want to end this meeting?")) return;
+    
+    setLoadingAction("end");
+    
+    try {
+      const accessToken = getCookie("accessToken");
+      if (!accessToken) {
+        alert("Authentication required");
+        return;
+      }
+
+      const response = await axios.post(
+        `${BASE_URL}/classes/end_meeting/${classData._id}`,
+        {},
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (response.data) {
+        // Refresh class data
+        const refreshResponse = await fetch(`${BASE_URL}/classes/${classId}`, {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            "Content-Type": "application/json",
+          },
+        });
+        if (refreshResponse.ok) {
+          const data = await refreshResponse.json();
+          setClassData(data.data || data);
+        }
+        alert("Meeting ended successfully!");
+      }
+    } catch (error: any) {
+      console.error("Error ending meeting:", error);
+      alert(
+        error.response?.data?.message ||
+          "Failed to end meeting. Please try again."
+      );
+    } finally {
+      setLoadingAction(null);
+    }
+  };
+
+  const handleDeleteClass = async () => {
+    if (!classData) return;
+    if (
+      !confirm(
+        "Are you sure you want to delete this class? This action cannot be undone."
+      )
+    ) {
+      return;
+    }
+
+    setLoadingAction("delete");
+    
+    try {
+      const accessToken = getCookie("accessToken");
+      if (!accessToken) {
+        alert("Authentication required");
+        return;
+      }
+
+      const response = await axios.delete(`${BASE_URL}/classes/${classData._id}`, {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (response.status === 200 || response.status === 204) {
+        alert("Class deleted successfully!");
+        router.push("/Homepage/Classes/Scheduled");
+      }
+    } catch (error: any) {
+      console.error("Error deleting class:", error);
+      alert(
+        error.response?.data?.message ||
+          "Failed to delete class. Please try again."
+      );
+    } finally {
+      setLoadingAction(null);
+    }
+  };
+
   const handleJoinClass = async () => {
     if (!classData) return;
     
@@ -158,6 +321,8 @@ function ClassDetailsContent({ classId }: { classId: string }) {
         pass: classData.password || "",
         userName: userProfile?.name || "User",
         email: userProfile?.email || "",
+        role: userProfile?.role === "teacher" ? 1 : 0,
+        account: classData.zoomAccountUsed,
       };
 
       console.log("Data ===>", ZoomMeetingNumber);
@@ -243,32 +408,34 @@ function ClassDetailsContent({ classId }: { classId: string }) {
             </div>
 
             {/* Teacher Section */}
-            <div className="bg-gray-50 rounded-xl p-6">
-              <h3 className="text-xl font-semibold mb-4">Instructor</h3>
-              <div className="flex items-start space-x-4">
-                <Image
-                  src={classData.teacher.profileImage}
-                  alt={classData.teacher.name}
-                  width={80}
-                  height={80}
-                  className="rounded-full object-cover"
-                />
-                <div className="flex-1">
-                  <h4 className="text-xl font-semibold text-gray-900">{classData.teacher.name}</h4>
-                  <p className="text-gray-600 mb-3">{classData.teacher.teacherCategory}</p>
-                  {classData.teacher.AboutMe && (
-                    <p className="text-gray-600 mb-3">{classData.teacher.AboutMe}</p>
-                  )}
-                  <div className="flex flex-wrap gap-2">
-                    {classData.teacher.expertise.map((skill, idx) => (
-                      <span key={idx} className="text-sm px-3 py-1 bg-orange-100 text-orange-600 rounded-full">
-                        {skill}
-                      </span>
-                    ))}
+            {typeof classData.teacher === "object" && (
+              <div className="bg-gray-50 rounded-xl p-6">
+                <h3 className="text-xl font-semibold mb-4">Instructor</h3>
+                <div className="flex items-start space-x-4">
+                  <Image
+                    src={classData.teacher.profileImage}
+                    alt={classData.teacher.name}
+                    width={80}
+                    height={80}
+                    className="rounded-full object-cover"
+                  />
+                  <div className="flex-1">
+                    <h4 className="text-xl font-semibold text-gray-900">{classData.teacher.name}</h4>
+                    <p className="text-gray-600 mb-3">{classData.teacher.teacherCategory}</p>
+                    {classData.teacher.AboutMe && (
+                      <p className="text-gray-600 mb-3">{classData.teacher.AboutMe}</p>
+                    )}
+                    <div className="flex flex-wrap gap-2">
+                      {classData.teacher.expertise.map((skill, idx) => (
+                        <span key={idx} className="text-sm px-3 py-1 bg-orange-100 text-orange-600 rounded-full">
+                          {skill}
+                        </span>
+                      ))}
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
+            )}
 
             {/* What You'll Gain */}
             {classData.whatYoullGain.length > 0 && (
@@ -370,21 +537,81 @@ function ClassDetailsContent({ classId }: { classId: string }) {
               </div>
             </div>
 
-            {/* Join Button */}
-            {classData.status && (
-              <div className="sticky top-4">
-                <button
-                  onClick={handleJoinClass}
-                  disabled={joiningClass}
-                  className="w-full bg-orange-500 text-white py-4 px-6 rounded-xl text-lg font-semibold hover:bg-orange-600 transition disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {joiningClass ? "Joining..." : "Join Class"}
-                </button>
-                <p className="text-sm text-gray-500 text-center mt-2">
-                  {classData.students.length} students enrolled
-                </p>
-              </div>
-            )}
+            {/* Action Buttons */}
+            <div className="sticky top-4 space-y-4">
+              {/* Teacher Actions - Only show if user is the class creator */}
+              {(() => {
+                const isCreator = isClassCreator();
+                console.log("Rendering check - isCreator:", isCreator);
+                console.log("Rendering check - meeting_number:", classData.meeting_number);
+                console.log("Rendering check - status:", classData.status);
+                return isCreator;
+              })() && (
+                <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
+                  <h3 className="text-lg font-semibold mb-4">Manage Class</h3>
+                  <div className="space-y-3">
+                    {/* Show Start Class button when no meeting number exists */}
+                    {!classData.meeting_number && (
+                      <button
+                        onClick={handleStartClass}
+                        disabled={loadingAction === "start"}
+                        className="w-full bg-green-500 text-white py-3 px-4 rounded-lg font-semibold hover:bg-green-600 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                      >
+                        <Play className="w-5 h-5" />
+                        {loadingAction === "start" ? "Starting..." : "Start Class"}
+                      </button>
+                    )}
+
+                    {/* Show Join and End Meeting buttons when meeting number exists */}
+                    {classData.meeting_number && (
+                      <>
+                        <button
+                          onClick={handleJoinClass}
+                          disabled={joiningClass}
+                          className="w-full bg-blue-500 text-white py-3 px-4 rounded-lg font-semibold hover:bg-blue-600 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                        >
+                          <ExternalLink className="w-5 h-5" />
+                          {joiningClass ? "Joining..." : "Join Meeting"}
+                        </button>
+                        <button
+                          onClick={handleEndMeeting}
+                          disabled={loadingAction === "end"}
+                          className="w-full bg-red-500 text-white py-3 px-4 rounded-lg font-semibold hover:bg-red-600 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                        >
+                          <Square className="w-5 h-5" />
+                          {loadingAction === "end" ? "Ending..." : "End Meeting"}
+                        </button>
+                      </>
+                    )}
+
+                    <button
+                      onClick={handleDeleteClass}
+                      disabled={loadingAction === "delete"}
+                      className="w-full bg-gray-100 text-red-600 py-3 px-4 rounded-lg font-semibold hover:bg-red-50 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    >
+                      <Trash2 className="w-5 h-5" />
+                      {loadingAction === "delete" ? "Deleting..." : "Delete Class"}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Student Join Button - Show only for students (not teachers who created the class) */}
+              {classData.status && !isClassCreator() && (
+                <div>
+                  <button
+                    onClick={handleJoinClass}
+                    disabled={joiningClass}
+                    className="w-full bg-orange-500 text-white py-4 px-6 rounded-xl text-lg font-semibold hover:bg-orange-600 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {joiningClass ? "Joining..." : "Join Class"}
+                  </button>
+                  <p className="text-sm text-gray-500 text-center mt-2">
+                    {classData.students.length} students enrolled
+                  </p>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>

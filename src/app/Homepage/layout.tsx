@@ -6,6 +6,7 @@ import {
   User,
   BookOpen,
   Menu,
+  Calendar,
 } from "lucide-react";
 import { useRouter, usePathname } from "next/navigation";
 import Cookies from "js-cookie";
@@ -125,6 +126,15 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               label="Profile"
               isActive={pathname === "/Homepage/Profile"}
               onClick={() => router.push("/Homepage/Profile")}
+            />
+          )}
+
+          {user && user.role === "teacher" && (
+            <MenuItem
+              icon={<Calendar size={18} />}
+              label="Scheduled Classes"
+              isActive={pathname === "/Homepage/Classes/Scheduled"}
+              onClick={() => router.push("/Homepage/Classes/Scheduled")}
             />
           )}
 
