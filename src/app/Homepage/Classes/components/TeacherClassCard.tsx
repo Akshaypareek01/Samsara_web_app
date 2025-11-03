@@ -19,7 +19,8 @@ interface ClassData {
   whatYoullGain: string[];
   meeting_number?: string;
   password?: string;
-  teacher: {
+  zoomAccountUsed?: string;
+  teacher: string | {
     _id: string;
     name: string;
     email: string;
@@ -47,7 +48,7 @@ interface TeacherClassCardProps {
   onStartClass: (classId: string) => void;
   onJoinClass: (classId: string) => void;
   onEndMeeting: (classId: string) => void;
-  onDeleteClass: (classId: string) => void;
+  onDeleteClass?: (classId: string) => void;
   onViewDetails: (classId: string) => void;
   isLoading: boolean;
   loadingAction?: string | null;
@@ -200,14 +201,16 @@ export default function TeacherClassCard({
             </button>
           </div>
 
-          <button
-            onClick={() => onDeleteClass(classItem._id)}
-            disabled={isLoading && loadingAction === "delete"}
-            className="w-full bg-gray-100 text-red-600 px-3 py-2 rounded-md text-xs sm:text-sm hover:bg-red-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 flex items-center justify-center gap-2"
-          >
-            <Trash2 className="w-3 h-3" />
-            {loadingAction === "delete" ? "Deleting..." : "Delete Class"}
-          </button>
+          {onDeleteClass && (
+            <button
+              onClick={() => onDeleteClass(classItem._id)}
+              disabled={isLoading && loadingAction === "delete"}
+              className="w-full bg-gray-100 text-red-600 px-3 py-2 rounded-md text-xs sm:text-sm hover:bg-red-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 flex items-center justify-center gap-2"
+            >
+              <Trash2 className="w-3 h-3" />
+              {loadingAction === "delete" ? "Deleting..." : "Delete Class"}
+            </button>
+          )}
         </div>
       </div>
     </div>

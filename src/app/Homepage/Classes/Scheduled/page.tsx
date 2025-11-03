@@ -119,8 +119,13 @@ export default function ScheduledClassesPage() {
         }
       );
 
-      const responseData = response.data as any;
-      const classesData = responseData?.data || responseData || [];
+      interface ApiResponse {
+        data?: ClassData[];
+      }
+      const responseData = response.data as ApiResponse | ClassData[];
+      const classesData = Array.isArray(responseData) 
+        ? responseData 
+        : responseData?.data || [];
       // Filter to show only classes created by the logged-in teacher
       const filteredClasses = Array.isArray(classesData)
         ? classesData.filter(
@@ -161,12 +166,16 @@ export default function ScheduledClassesPage() {
         }
         alert("Class meeting started successfully!");
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error("Error starting class:", error);
-      alert(
-        error.response?.data?.message ||
-          "Failed to start class meeting. Please try again."
-      );
+      const errorMessage = 
+        (error && typeof error === 'object' && 'response' in error && 
+         error.response && typeof error.response === 'object' && 
+         'data' in error.response && error.response.data &&
+         typeof error.response.data === 'object' && 'message' in error.response.data)
+          ? String(error.response.data.message)
+          : "Failed to start class meeting. Please try again.";
+      alert(errorMessage);
     } finally {
       setLoadingAction(null);
     }
@@ -244,12 +253,16 @@ export default function ScheduledClassesPage() {
         }
         alert("Meeting ended successfully!");
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error("Error ending meeting:", error);
-      alert(
-        error.response?.data?.message ||
-          "Failed to end meeting. Please try again."
-      );
+      const errorMessage = 
+        (error && typeof error === 'object' && 'response' in error && 
+         error.response && typeof error.response === 'object' && 
+         'data' in error.response && error.response.data &&
+         typeof error.response.data === 'object' && 'message' in error.response.data)
+          ? String(error.response.data.message)
+          : "Failed to end meeting. Please try again.";
+      alert(errorMessage);
     } finally {
       setLoadingAction(null);
     }

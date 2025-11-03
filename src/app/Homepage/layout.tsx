@@ -3,7 +3,6 @@
 import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import {
-  User,
   BookOpen,
   Menu,
   Calendar,

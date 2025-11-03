@@ -201,12 +201,16 @@ function ClassDetailsContent({ classId }: { classId: string }) {
         }
         alert("Class meeting started successfully!");
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error("Error starting class:", error);
-      alert(
-        error.response?.data?.message ||
-          "Failed to start class meeting. Please try again."
-      );
+      const errorMessage = 
+        (error && typeof error === 'object' && 'response' in error && 
+         error.response && typeof error.response === 'object' && 
+         'data' in error.response && error.response.data &&
+         typeof error.response.data === 'object' && 'message' in error.response.data)
+          ? String(error.response.data.message)
+          : "Failed to start class meeting. Please try again.";
+      alert(errorMessage);
     } finally {
       setLoadingAction(null);
     }
@@ -250,12 +254,16 @@ function ClassDetailsContent({ classId }: { classId: string }) {
         }
         alert("Meeting ended successfully!");
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error("Error ending meeting:", error);
-      alert(
-        error.response?.data?.message ||
-          "Failed to end meeting. Please try again."
-      );
+      const errorMessage = 
+        (error && typeof error === 'object' && 'response' in error && 
+         error.response && typeof error.response === 'object' && 
+         'data' in error.response && error.response.data &&
+         typeof error.response.data === 'object' && 'message' in error.response.data)
+          ? String(error.response.data.message)
+          : "Failed to end meeting. Please try again.";
+      alert(errorMessage);
     } finally {
       setLoadingAction(null);
     }
@@ -291,12 +299,16 @@ function ClassDetailsContent({ classId }: { classId: string }) {
         alert("Class deleted successfully!");
         router.push("/Homepage/Classes/Scheduled");
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error("Error deleting class:", error);
-      alert(
-        error.response?.data?.message ||
-          "Failed to delete class. Please try again."
-      );
+      const errorMessage = 
+        (error && typeof error === 'object' && 'response' in error && 
+         error.response && typeof error.response === 'object' && 
+         'data' in error.response && error.response.data &&
+         typeof error.response.data === 'object' && 'message' in error.response.data)
+          ? String(error.response.data.message)
+          : "Failed to delete class. Please try again.";
+      alert(errorMessage);
     } finally {
       setLoadingAction(null);
     }
