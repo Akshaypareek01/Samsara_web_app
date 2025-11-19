@@ -162,7 +162,7 @@ function ZoomWebViewContent() {
           </div>
           <h2 className="text-xl font-semibold text-gray-900 mb-2">Meeting Opened</h2>
           <p className="text-gray-600 mb-6">
-            The Zoom meeting has been opened in a new window. If it didn't open, check your popup blocker settings.
+            The Zoom meeting has been opened in a new window. If it didn&apos;t open, check your popup blocker settings.
           </p>
           <div className="flex gap-4 justify-center">
             <button
