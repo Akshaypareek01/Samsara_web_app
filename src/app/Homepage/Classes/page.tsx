@@ -253,6 +253,7 @@ export default function MyClassesPage() {
         pass: classData.password || "",
         userName: userProfile?.name || "User",
         email: userProfile?.email || "",
+        classId: classData._id || "",
       };
 
       console.log("Data ===>", ZoomMeetingNumber);
@@ -296,6 +297,7 @@ export default function MyClassesPage() {
         pass: eventData.password || "",
         userName: userProfile?.name || "User",
         email: userProfile?.email || "",
+        eventId: eventData._id || "",
       };
 
       console.log("Event Data ===>", ZoomMeetingNumber);

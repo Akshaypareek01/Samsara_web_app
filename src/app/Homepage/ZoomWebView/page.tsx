@@ -3,6 +3,7 @@
 import { useEffect, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft, Loader2 } from "lucide-react";
+import { BASE_URL } from "@/lib/utils";
 
 function ZoomWebViewContent() {
   const [url, setUrl] = useState("");
@@ -27,36 +28,53 @@ function ZoomWebViewContent() {
       
       console.log("Data ===>", ZoomMeetingNumber);
       
-      // Create the Zoom meeting URL
-      const zoomMeetingNumberString = JSON.stringify(ZoomMeetingNumber);
-      const queryParams = new URLSearchParams();
-      queryParams.append('ZoomMeetingNumber', zoomMeetingNumberString);
-      const queryString = queryParams.toString();
+      // Create the Zoom meeting URL based on classId or eventId
+      let joinUrl = `${BASE_URL}/zoom/join-meeting?`;
       
-      console.log("zoom data ===>", zoomMeetingNumberString);
-      const uri = `https://samsara-zoom-web-view.vercel.app/cdn?${queryString}`;
-      console.log("URL Updated ==>", uri);
+      if (ZoomMeetingNumber.classId) {
+        joinUrl += `classId=${ZoomMeetingNumber.classId}`;
+      } else if (ZoomMeetingNumber.eventId) {
+        joinUrl += `eventId=${ZoomMeetingNumber.eventId}`;
+      } else {
+        setError("No classId or eventId provided");
+        setIsLoading(false);
+        return;
+      }
       
-      setUrl(uri);
+      // Add userName and role parameters (default role to 0 if not provided)
+      const role = ZoomMeetingNumber.role ?? 0;
+      joinUrl += `&userName=${encodeURIComponent(ZoomMeetingNumber.userName)}&role=${role}`;
+      
+      setUrl(joinUrl);
       setIsLoading(false);
+      
+      // Open meeting in new window since backend blocks iframe embedding
+      const meetingWindow = window.open(joinUrl, '_blank', 'noopener,noreferrer');
+      
+      if (!meetingWindow) {
+        setError("Popup blocked. Please allow popups for this site and try again.");
+        return;
+      }
+      
+      // Monitor if window was closed
+      const checkClosed = setInterval(() => {
+        if (meetingWindow.closed) {
+          clearInterval(checkClosed);
+          // Optionally navigate back when meeting window closes
+          // router.back();
+        }
+      }, 1000);
+      
+      return () => clearInterval(checkClosed);
     } catch (err) {
       console.error("Error parsing meeting data:", err);
       setError("Invalid meeting data");
       setIsLoading(false);
     }
-  }, [searchParams]);
+  }, [searchParams, router]);
 
   const handleBack = () => {
     router.back();
-  };
-
-  const handleWebViewLoad = () => {
-    console.log("WebView loaded successfully");
-  };
-
-  const handleWebViewError = (error: unknown) => {
-    console.error("WebView error:", error);
-    setError("Failed to load meeting. Please try again.");
   };
 
   if (isLoading) {
@@ -102,12 +120,22 @@ function ZoomWebViewContent() {
             </div>
             <h2 className="text-xl font-semibold text-gray-900 mb-2">Unable to Join Meeting</h2>
             <p className="text-gray-600 mb-6">{error}</p>
-            <button
-              onClick={handleBack}
-              className="bg-orange-500 text-white px-6 py-2 rounded-lg hover:bg-orange-600 transition"
-            >
-              Go Back
-            </button>
+            <div className="flex gap-4 justify-center">
+              {url && (
+                <button
+                  onClick={() => window.open(url, '_blank', 'noopener,noreferrer')}
+                  className="bg-orange-500 text-white px-6 py-2 rounded-lg hover:bg-orange-600 transition"
+                >
+                  Open Meeting
+                </button>
+              )}
+              <button
+                onClick={handleBack}
+                className="bg-gray-200 text-gray-700 px-6 py-2 rounded-lg hover:bg-gray-300 transition"
+              >
+                Go Back
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -124,16 +152,34 @@ function ZoomWebViewContent() {
         <ArrowLeft className="w-6 h-6 text-gray-600" />
       </button>
 
-      {/* Full Screen WebView */}
-      <iframe
-        src={url}
-        className="w-full h-full border-0"
-        title="Zoom Meeting"
-        onLoad={handleWebViewLoad}
-        onError={handleWebViewError}
-        allow="camera; microphone; fullscreen; autoplay; encrypted-media"
-        sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox"
-      />
+      {/* Meeting Opened Message */}
+      <div className="flex-1 flex items-center justify-center">
+        <div className="text-center p-6 max-w-md">
+          <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <svg className="w-8 h-8 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">Meeting Opened</h2>
+          <p className="text-gray-600 mb-6">
+            The Zoom meeting has been opened in a new window. If it didn't open, check your popup blocker settings.
+          </p>
+          <div className="flex gap-4 justify-center">
+            <button
+              onClick={() => window.open(url, '_blank', 'noopener,noreferrer')}
+              className="bg-orange-500 text-white px-6 py-2 rounded-lg hover:bg-orange-600 transition"
+            >
+              Open Meeting Again
+            </button>
+            <button
+              onClick={handleBack}
+              className="bg-gray-200 text-gray-700 px-6 py-2 rounded-lg hover:bg-gray-300 transition"
+            >
+              Go Back
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

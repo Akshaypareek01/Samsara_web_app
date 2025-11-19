@@ -335,6 +335,7 @@ function ClassDetailsContent({ classId }: { classId: string }) {
         email: userProfile?.email || "",
         role: userProfile?.role === "teacher" ? 1 : 0,
         account: classData.zoomAccountUsed,
+        classId: classData._id || "",
       };
 
       console.log("Data ===>", ZoomMeetingNumber);

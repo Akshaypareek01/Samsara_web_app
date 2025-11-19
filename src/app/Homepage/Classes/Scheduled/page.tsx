@@ -204,6 +204,7 @@ export default function ScheduledClassesPage() {
         pass: classData.password,
         userName: userProfile && userProfile.name,
         email: userProfile && userProfile.email,
+        classId: classData._id || "",
         role:1,
         account:classData.zoomAccountUsed
       };

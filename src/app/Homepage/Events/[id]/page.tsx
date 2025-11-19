@@ -159,6 +159,7 @@ function EventDetailsContent({ eventId }: { eventId: string }) {
         pass: eventData.password || "",
         userName: userProfile?.name || "User",
         email: userProfile?.email || "",
+        eventId: eventData._id || "",
       };
 
       console.log("Event Data ===>", ZoomMeetingNumber);
