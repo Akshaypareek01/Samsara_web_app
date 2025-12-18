@@ -10,14 +10,14 @@ const getAccessToken = (): string | null => {
 };
 
 // Helper to make authenticated requests
-const makeRequest = async (
+const makeRequest = async <T = unknown>(
   endpoint: string,
   options: RequestInit = {}
-): Promise<any> => {
+): Promise<T> => {
   const token = getAccessToken();
-  const headers: HeadersInit = {
+  const headers: Record<string, string> = {
     'Content-Type': 'application/json',
-    ...options.headers,
+    ...(options.headers as Record<string, string>),
   };
 
   if (token) {
@@ -46,7 +46,7 @@ interface Plan {
   validityDays: number;
   features: string[];
   planType?: string;
-  metadata?: any;
+  metadata?: Record<string, unknown>;
 }
 
 interface Pricing {
@@ -81,7 +81,7 @@ interface Membership {
   couponCode?: {
     code: string;
   };
-  metadata?: any;
+  metadata?: Record<string, unknown>;
 }
 
 interface Transaction {
@@ -103,9 +103,9 @@ class MembershipApiService {
   async getActivePlans(): Promise<Plan[]> {
     try {
       console.log('=== MEMBERSHIP API SERVICE: Getting active plans ===');
-      const data = await makeRequest('/membership-plans/active');
+      const data = await makeRequest<{ results?: Plan[] } | Plan[]>('/membership-plans/active');
       console.log('Active plans response:', data);
-      return data.results || data;
+      return Array.isArray(data) ? data : (data.results || []);
     } catch (error) {
       console.error('Error getting active plans:', error);
       throw error;
@@ -121,7 +121,7 @@ class MembershipApiService {
         ? `/membership-plans/${planId}/pricing?couponCode=${couponCode}`
         : `/membership-plans/${planId}/pricing`;
 
-      const data = await makeRequest(endpoint);
+      const data = await makeRequest<{ pricing: Pricing; plan: Plan }>(endpoint);
       console.log('Plan pricing response:', data);
       return data;
     } catch (error) {
@@ -131,12 +131,12 @@ class MembershipApiService {
   }
 
   // Coupons
-  async getActiveCoupons(): Promise<any[]> {
+  async getActiveCoupons(): Promise<Array<Record<string, unknown>>> {
     try {
       console.log('=== MEMBERSHIP API SERVICE: Getting active coupons ===');
-      const data = await makeRequest('/coupons/active');
+      const data = await makeRequest<{ results?: Array<Record<string, unknown>> } | Array<Record<string, unknown>>>('/coupons/active');
       console.log('Active coupons response:', data);
-      return data.results || data;
+      return Array.isArray(data) ? data : (data.results || []);
     } catch (error) {
       console.error('Error getting active coupons:', error);
       throw error;
@@ -148,12 +148,12 @@ class MembershipApiService {
     planId: string,
     userCategory: string,
     orderAmount: number
-  ): Promise<{ valid: boolean; finalAmount: number; couponCode?: any }> {
+  ): Promise<{ valid: boolean; finalAmount: number; couponCode?: Record<string, unknown> }> {
     try {
       console.log('=== MEMBERSHIP API SERVICE: Validating coupon ===');
       console.log('Coupon code:', code, 'Plan ID:', planId, 'User Category:', userCategory, 'Order Amount:', orderAmount);
 
-      const data = await makeRequest('/coupons/validate', {
+      const data = await makeRequest<{ valid: boolean; finalAmount: number; couponCode?: Record<string, unknown> }>('/coupons/validate', {
         method: 'POST',
         body: JSON.stringify({
           code,
@@ -172,12 +172,12 @@ class MembershipApiService {
   }
 
   // Payments
-  async createPaymentOrder(planId: string, couponCode: string | null = null): Promise<any> {
+  async createPaymentOrder(planId: string, couponCode: string | null = null): Promise<{ order: { id: string; amount: number; currency?: string } }> {
     try {
       console.log('=== MEMBERSHIP API SERVICE: Creating payment order ===');
       console.log('Plan ID:', planId, 'Coupon Code:', couponCode);
 
-      const data = await makeRequest('/payments/create-order', {
+      const data = await makeRequest<{ order: { id: string; amount: number; currency?: string } }>('/payments/create-order', {
         method: 'POST',
         body: JSON.stringify({
           planId,
@@ -197,12 +197,12 @@ class MembershipApiService {
     razorpayOrderId: string,
     razorpayPaymentId: string,
     razorpaySignature: string
-  ): Promise<any> {
+  ): Promise<{ success: boolean; [key: string]: unknown }> {
     try {
       console.log('=== MEMBERSHIP API SERVICE: Verifying payment ===');
       console.log('Order ID:', razorpayOrderId, 'Payment ID:', razorpayPaymentId);
 
-      const data = await makeRequest('/payments/verify', {
+      const data = await makeRequest<{ success: boolean; [key: string]: unknown }>('/payments/verify', {
         method: 'POST',
         body: JSON.stringify({
           razorpay_order_id: razorpayOrderId,
@@ -223,12 +223,13 @@ class MembershipApiService {
   async getActiveMembership(): Promise<Membership | null> {
     try {
       console.log('=== MEMBERSHIP API SERVICE: Getting active membership ===');
-      const data = await makeRequest('/payments/memberships/active');
+      const data = await makeRequest<Membership | null>('/payments/memberships/active');
       console.log('Active membership response:', data);
       return data;
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error getting active membership:', error);
-      if (error.message?.includes('404') || error.message?.includes('Not Found')) {
+      const errorMessage = error instanceof Error ? error.message : '';
+      if (errorMessage.includes('404') || errorMessage.includes('Not Found')) {
         return null; // No active membership
       }
       throw error;
@@ -240,7 +241,7 @@ class MembershipApiService {
       console.log('=== MEMBERSHIP API SERVICE: Getting user memberships ===');
       console.log('Limit:', limit, 'Page:', page);
 
-      const data = await makeRequest(`/payments/memberships?limit=${limit}&page=${page}`);
+      const data = await makeRequest<{ results: Membership[] } | Membership[]>(`/payments/memberships?limit=${limit}&page=${page}`);
       console.log('User memberships response:', data);
       return data;
     } catch (error) {
@@ -254,7 +255,7 @@ class MembershipApiService {
       console.log('=== MEMBERSHIP API SERVICE: Getting user transactions ===');
       console.log('Limit:', limit, 'Page:', page);
 
-      const data = await makeRequest(`/payments/transactions?limit=${limit}&page=${page}`);
+      const data = await makeRequest<{ results: Transaction[] } | Transaction[]>(`/payments/transactions?limit=${limit}&page=${page}`);
       console.log('User transactions response:', data);
       return data;
     } catch (error) {
@@ -264,12 +265,12 @@ class MembershipApiService {
   }
 
   // Assign membership with coupon (for 100% off coupons)
-  async assignWithCoupon(userId: string, planId: string, couponCode: string): Promise<any> {
+  async assignWithCoupon(userId: string, planId: string, couponCode: string): Promise<Record<string, unknown>> {
     try {
       console.log('=== MEMBERSHIP API SERVICE: Assigning membership with coupon ===');
       console.log('User ID:', userId, 'Plan ID:', planId, 'Coupon Code:', couponCode);
 
-      const response = await makeRequest('/memberships/assign-with-coupon', {
+      const response = await makeRequest<Record<string, unknown>>('/memberships/assign-with-coupon', {
         method: 'POST',
         body: JSON.stringify({
           userId,
@@ -287,7 +288,8 @@ class MembershipApiService {
   }
 }
 
-export default new MembershipApiService();
+const membershipApiService = new MembershipApiService();
+export default membershipApiService;
 export type { Plan, Pricing, Membership, Transaction };
 
 

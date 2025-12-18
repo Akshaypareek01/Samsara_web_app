@@ -1,12 +1,12 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import toast from 'react-hot-toast';
 import Cookies from 'js-cookie';
 import MembershipApiService, { Pricing } from '@/lib/membershipApiService';
 import { openRazorpayCheckout, RAZORPAY_KEY_ID, RazorpayResponse } from '@/lib/razorpay';
-import { CreditCard, Tag, Shield, Mail, ArrowLeft } from 'lucide-react';
+import { CreditCard, Tag, Shield, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 
 // Helper to get user profile from cookies
@@ -22,7 +22,7 @@ const getUserProfile = (): { name?: string; email?: string; phone?: string; _id?
   return null;
 };
 
-export default function PaymentPage() {
+function PaymentPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const planId = searchParams.get('planId') || '';
@@ -32,33 +32,34 @@ export default function PaymentPage() {
   const [loading, setLoading] = useState(false);
   const [couponCode, setCouponCode] = useState('');
   const [pricing, setPricing] = useState<Pricing | null>(null);
-  const [appliedCoupon, setAppliedCoupon] = useState<any>(null);
-  const [userProfile, setUserProfile] = useState<any>(null);
+  const [appliedCoupon, setAppliedCoupon] = useState<{ name?: string } | null>(null);
+  const [userProfile, setUserProfile] = useState<{ name?: string; email?: string; phone?: string; _id?: string; id?: string } | null>(null);
 
-  useEffect(() => {
-    loadUserProfile();
-    loadPlanPricing();
-  }, []);
-
-  const loadUserProfile = () => {
+  const loadUserProfile = useCallback(() => {
     const profile = getUserProfile();
     if (profile) {
       setUserProfile(profile);
     }
-  };
+  }, []);
 
-  const loadPlanPricing = async () => {
+  const loadPlanPricing = useCallback(async () => {
     try {
       setLoading(true);
       const pricingData = await MembershipApiService.getPlanPricing(planId);
       setPricing(pricingData.pricing);
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error loading pricing:', error);
-      toast.error(error.message || 'Failed to load pricing information');
+      const errorMessage = error instanceof Error ? error.message : 'Failed to load pricing information';
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
-  };
+  }, [planId]);
+
+  useEffect(() => {
+    loadUserProfile();
+    loadPlanPricing();
+  }, [loadUserProfile, loadPlanPricing]);
 
   const applyCoupon = async () => {
     if (!couponCode.trim()) {
@@ -93,11 +94,14 @@ export default function PaymentPage() {
 
         // Get user ID
         const profile = userProfile || getUserProfile();
-        if (!profile || (!(profile as any)._id && !(profile as any).id)) {
+        if (!profile || (!profile._id && !profile.id)) {
           throw new Error('User data not found. Please try again.');
         }
 
-        const userId = (profile as any)._id || (profile as any).id;
+        const userId = profile._id || profile.id;
+        if (!userId) {
+          throw new Error('User ID not found. Please try again.');
+        }
 
         // Call assign-with-coupon API
         const assignResult = await MembershipApiService.assignWithCoupon(userId, planId, couponCode);
@@ -106,7 +110,7 @@ export default function PaymentPage() {
 
         // Update pricing display
         const result = await MembershipApiService.getPlanPricing(planId, couponCode);
-        setAppliedCoupon(result.pricing);
+        setAppliedCoupon(couponValidation.couponCode || { name: couponCode });
         setPricing(result.pricing);
 
         // Show success and redirect
@@ -117,13 +121,14 @@ export default function PaymentPage() {
       } else {
         // Normal coupon application flow
         const result = await MembershipApiService.getPlanPricing(planId, couponCode);
-        setAppliedCoupon(couponValidation.couponCode);
+        setAppliedCoupon(couponValidation.couponCode ? { name: couponCode } : null);
         setPricing(result.pricing);
         toast.success('Coupon applied successfully!');
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error applying coupon:', error);
-      toast.error(error.message || 'Failed to apply coupon code');
+      const errorMessage = error instanceof Error ? error.message : 'Failed to apply coupon code';
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -158,7 +163,7 @@ export default function PaymentPage() {
         prefill: {
           name: profile?.name || 'User',
           email: profile?.email || 'user@example.com',
-          contact: profile?.phone || profile?.contact || '9999999999',
+          contact: profile?.phone || '9999999999',
         },
         notes: {
           planId: planId,
@@ -189,7 +194,7 @@ export default function PaymentPage() {
             } else {
               toast.error('Payment verification failed. Please contact support.');
             }
-          } catch (error: any) {
+          } catch (error) {
             console.error('Payment verification error:', error);
             toast.error('Payment verification failed. Please contact support.');
           }
@@ -201,9 +206,10 @@ export default function PaymentPage() {
           },
         },
       });
-    } catch (error: any) {
+    } catch (error) {
       console.error('Payment error:', error);
-      toast.error(error.message || 'Failed to process payment');
+      const errorMessage = error instanceof Error ? error.message : 'Failed to process payment';
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -354,6 +360,21 @@ export default function PaymentPage() {
         </button>
       </div>
     </div>
+  );
+}
+
+export default function PaymentPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    }>
+      <PaymentPageContent />
+    </Suspense>
   );
 }
 

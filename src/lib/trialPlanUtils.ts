@@ -12,7 +12,7 @@ export const isTrialPlan = (plan: Plan | null | undefined): boolean => {
     plan.name?.toLowerCase().includes('trial') ||
     plan.description?.toLowerCase().includes('trial') ||
     (plan.metadata && plan.metadata.isTrialPlan === true) ||
-    (plan as any).couponCodeString === 'TRIAL_FREE'
+    ((plan as Plan & { couponCodeString?: string }).couponCodeString === 'TRIAL_FREE')
   );
 };
 
@@ -22,10 +22,10 @@ export const isTrialPlan = (plan: Plan | null | undefined): boolean => {
 export const isTrialMembership = (membership: Membership | null | undefined): boolean => {
   if (!membership) return false;
 
-  return (
+  return !!(
     membership.planId?.planType === 'trial' ||
     membership.planName?.toLowerCase().includes('trial') ||
-    (membership as any).couponCodeString === 'TRIAL_FREE' ||
+    ((membership as Membership & { couponCodeString?: string }).couponCodeString === 'TRIAL_FREE') ||
     (membership.metadata && membership.metadata.isTrialPlan === true)
   );
 };

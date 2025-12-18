@@ -1,10 +1,16 @@
 // Razorpay Configuration
 export const RAZORPAY_KEY_ID = 'rzp_live_RFX8UK05mWECwo';
 
+// Razorpay instance type
+interface RazorpayInstance {
+  open: () => void;
+  on: (event: string, handler: () => void) => void;
+}
+
 // Declare Razorpay type for TypeScript
 declare global {
   interface Window {
-    Razorpay: any;
+    Razorpay: new (options: RazorpayOptions) => RazorpayInstance;
   }
 }
 

@@ -27,7 +27,6 @@ export default function MembershipPage() {
   const router = useRouter();
   const [plans, setPlans] = useState<Plan[]>([]);
   const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
   const [activeMembership, setActiveMembership] = useState<Membership | null>(null);
   const [hasUserHadTrial, setHasUserHadTrial] = useState(false);
 
@@ -59,18 +58,13 @@ export default function MembershipPage() {
       setActiveMembership(membershipData);
 
       console.log('✅ Plans loaded:', plansData.length, 'Filtered plans:', filteredPlans.length);
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error loading data:', error);
-      toast.error(error.message || 'Failed to load membership plans');
+      const errorMessage = error instanceof Error ? error.message : 'Failed to load membership plans';
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
-  };
-
-  const onRefresh = async () => {
-    setRefreshing(true);
-    await loadData();
-    setRefreshing(false);
   };
 
   const handleSelectPlan = (plan: Plan) => {
@@ -91,7 +85,7 @@ export default function MembershipPage() {
 
   const renderPlanCard = (plan: Plan) => {
     const planId = plan._id || plan.id;
-    const isActive = activeMembership && activeMembership.planId._id === planId;
+    const isActive = !!(activeMembership && activeMembership.planId._id === planId);
     const isTrial = isTrialPlan(plan);
 
     return (

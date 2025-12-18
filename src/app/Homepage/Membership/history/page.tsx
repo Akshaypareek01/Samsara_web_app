@@ -1,24 +1,18 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
 import MembershipApiService, { Membership, Transaction } from '@/lib/membershipApiService';
 import { ArrowLeft, Calendar, DollarSign, CreditCard, Tag } from 'lucide-react';
 
 export default function MembershipHistoryPage() {
-  const router = useRouter();
   const [memberships, setMemberships] = useState<Membership[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'memberships' | 'transactions'>('memberships');
 
-  useEffect(() => {
-    loadData();
-  }, []);
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
       setLoading(true);
       const [membershipsData, transactionsData] = await Promise.all([
@@ -27,22 +21,26 @@ export default function MembershipHistoryPage() {
       ]);
 
       // Handle both direct array responses and wrapped responses
-      setMemberships(
-        Array.isArray(membershipsData) ? membershipsData : (membershipsData?.results || [])
-      );
-      setTransactions(
-        Array.isArray(transactionsData) ? transactionsData : (transactionsData?.results || [])
-      );
+      const membershipsArray = Array.isArray(membershipsData) ? membershipsData : (membershipsData?.results || []);
+      const transactionsArray = Array.isArray(transactionsData) ? transactionsData : (transactionsData?.results || []);
+      
+      setMemberships(membershipsArray);
+      setTransactions(transactionsArray);
 
-      console.log('Memberships loaded:', memberships);
-      console.log('Transactions loaded:', transactions);
-    } catch (error: any) {
+      console.log('Memberships loaded:', membershipsArray);
+      console.log('Transactions loaded:', transactionsArray);
+    } catch (error) {
       console.error('Error loading data:', error);
-      toast.error(error.message || 'Failed to load membership history');
+      const errorMessage = error instanceof Error ? error.message : 'Failed to load membership history';
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
   const getStatusColor = (status: string): string => {
     switch (status.toLowerCase()) {
