@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import axios from "axios";
 import { ClassCard, EventCard, StatsSection, TabNavigation } from "./components";
 
+
 interface Attendance {
   id: string;
   classId: string;
@@ -133,7 +134,25 @@ export default function MyClassesPage() {
   const [joiningEvent, setJoiningEvent] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'classes' | 'events'>('classes');
   const router = useRouter();
+// REAL DERIVED STATS (MongoDB based)
 
+const attendedCount =
+  userProfile?.attendance?.filter(a => a.status === "attended").length || 0;
+
+// const totalHours =
+//   userProfile?.attendance?.reduce((acc, curr) => {
+//     const cls = allClasses.find(c => c._id === curr.classId);
+//     return acc + (cls?.duration || 0);
+//   }, 0) || 0;
+const totalHours =
+  userProfile?.attendance?.reduce((acc, curr) => {
+    const cls = allClasses.find(
+      c => String(c._id) === String(curr.classId)
+    );
+    return acc + (cls?.duration || 0);
+  }, 0) || 0;
+  //---------------------------------
+  
   // Get user's applied events
   const getUserAppliedEvents = async (userId: string) => {
     try {
@@ -208,6 +227,8 @@ export default function MyClassesPage() {
           const allClassesData = await allClassesResponse.json();
           setAllClasses(allClassesData.data || allClassesData);
         }
+
+
 
         // Fetch user events
         try {
@@ -389,12 +410,14 @@ export default function MyClassesPage() {
           </p>
         </div>
 
-        {/* Stats Section */}
-        <StatsSection 
-          classesCount={allClasses?.length || 0} 
-          eventsCount={userEvents?.length || 0} 
-        />
 
+
+<StatsSection 
+  classesCount={allClasses.length}
+  eventsCount={userEvents.length}
+  attendedCount={attendedCount}
+  totalHours={totalHours}
+/>
         <div className="mt-8 sm:mt-12">
           {/* Tab Navigation */}
           <TabNavigation
@@ -407,7 +430,7 @@ export default function MyClassesPage() {
           {/* Classes Tab */}
           {activeTab === 'classes' && (
             <>
-              {(allClasses?.length || 0) === 0 ? (
+              {/* {(allClasses?.length || 0) === 0 ? (
                 <div className="text-center py-12 sm:py-16">
                   <div className="text-gray-400 mb-4">
                     <svg className="mx-auto h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -415,7 +438,11 @@ export default function MyClassesPage() {
                     </svg>
                   </div>
                   <p className="text-gray-500 text-sm sm:text-base">No classes booked yet</p>
-                </div>
+                </div> */}
+                {(allClasses?.length || 0) === 0 ? (
+  <div className="text-center py-12 sm:py-16">
+    <p className="text-gray-500 text-sm sm:text-base">No classes booked yet</p>
+  </div>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6">
                   {(allClasses || []).map((classItem, index) => (
@@ -435,7 +462,7 @@ export default function MyClassesPage() {
           {/* Events Tab */}
           {activeTab === 'events' && (
             <>
-              {(userEvents?.length || 0) === 0 ? (
+              {/* {(userEvents?.length || 0) === 0 ? (
                 <div className="text-center py-12 sm:py-16">
                   <div className="text-gray-400 mb-4">
                     <svg className="mx-auto h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -443,8 +470,15 @@ export default function MyClassesPage() {
                     </svg>
                   </div>
                   <p className="text-gray-500 text-sm sm:text-base">No events booked yet</p>
-                </div>
-              ) : (
+                </div> */}
+                {(userEvents?.length || 0) === 0 ? (
+  <div className="text-center py-12 sm:py-16">
+    <p className="text-gray-500 text-sm sm:text-base">No events booked yet</p>
+  </div>
+) :
+
+
+(
                 <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6">
                   {(userEvents || []).map((eventItem, index) => (
                     <EventCard
