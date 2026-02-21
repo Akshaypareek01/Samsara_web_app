@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import Image from "next/image";
-import { BookOpen, Menu, Calendar, Crown, Activity, Bell, Search } from "lucide-react";
+import { BookOpen, Menu, Calendar, Crown, Activity, Bell, Search, CalendarDays, Users, User } from "lucide-react";
 import { useRouter, usePathname } from "next/navigation";
 import Cookies from "js-cookie";
 import { BASE_URL } from "@/lib/utils";
@@ -142,12 +142,34 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             isActive={pathname === "/Homepage/Classes"}
             onClick={() => router.push("/Homepage/Classes")}
           />
+
+          <MenuItem
+  icon={<CalendarDays size={18} />}
+  label="Events"
+  isActive={pathname.startsWith("/Homepage/Events")}
+  onClick={() => router.push("/Homepage/Events")}
+/>
+
           <MenuItem
             icon={<Crown size={18} />}
             label="Membership"
             isActive={pathname.startsWith("/Homepage/Membership")}
             onClick={() => router.push("/Homepage/Membership")}
           />
+
+<MenuItem
+  icon={<Users size={18} />}
+  label="Group Classes"
+  isActive={pathname.startsWith("/Homepage/Group")}
+  onClick={() => router.push("/Homepage/Group")}
+/>
+
+<MenuItem
+  icon={<User size={18} />}
+  label="1:1 Classes"
+  isActive={pathname.startsWith("/Homepage/onetoone")}
+  onClick={() => router.push("/Homepage/onetoone")}
+/>
 
           <MenuItem
             icon={<Activity size={18} />}
