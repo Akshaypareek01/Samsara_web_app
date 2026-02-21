@@ -126,8 +126,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           <MenuItem
             icon={<Calendar size={18} />}
             label="Profile"
-            isActive={pathname === "/Homepage"}
-            onClick={() => router.push("/Homepage")}
+            isActive={pathname === "/Homepage/Dashboard/UserProfile"}
+            onClick={() => router.push("/Homepage/Dashboard/UserProfile")}
           />
 
           {/* <MenuItem
