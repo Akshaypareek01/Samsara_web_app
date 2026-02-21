@@ -2,12 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import Image from "next/image";
-import {
-  BookOpen,
-  Menu,
-  Calendar,
-  Crown,
-} from "lucide-react";
+import { BookOpen, Menu, Calendar, Crown, Activity, Bell, Search } from "lucide-react";
 import { useRouter, usePathname } from "next/navigation";
 import Cookies from "js-cookie";
 import { BASE_URL } from "@/lib/utils";
@@ -129,6 +124,19 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           )}
 
           <MenuItem
+            icon={<Calendar size={18} />}
+            label="Profile"
+            isActive={pathname === "/Homepage"}
+            onClick={() => router.push("/Homepage")}
+          />
+
+          {/* <MenuItem
+  icon={<BookOpen size={18} />}
+  label="Profile"
+  isActive={pathname.startsWith("/Homepage/Profile")}
+  onClick={() => router.push("/Homepage/Profile")}
+/> */}
+          <MenuItem
             icon={<BookOpen size={18} />}
             label="My Classes"
             isActive={pathname === "/Homepage/Classes"}
@@ -139,6 +147,13 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             label="Membership"
             isActive={pathname.startsWith("/Homepage/Membership")}
             onClick={() => router.push("/Homepage/Membership")}
+          />
+
+          <MenuItem
+            icon={<Activity size={18} />}
+            label="My Body"
+            isActive={pathname.startsWith("/Homepage/Mybody")}
+            onClick={() => router.push("/Homepage/Mybody")}
           />
           {/* <MenuItem
             icon={<Calendar size={18} />}
@@ -184,7 +199,45 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Top bar */}
-        <div className="hidden md:flex items-center justify-between px-6 py-3 bg-[#fdf4f2] mt-8">
+        {/* Top bar */}
+<div className="hidden md:flex items-center justify-between px-6 py-4 bg-[#fdf4f2] sticky top-0 z-20">
+
+  {/* Search */}
+  <div className="relative w-full max-w-xl">
+    <Search
+      className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+      size={18}
+    />
+    <input
+      type="text"
+      placeholder="Search..."
+      className="w-full pl-10 pr-4 py-2 rounded-full bg-white border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
+    />
+  </div>
+
+  {/* Right Side Icons */}
+  <div className="flex items-center gap-4 ml-6">
+
+    {/* Notification */}
+    <div className="relative cursor-pointer">
+      <Bell size={20} className="text-gray-600 hover:text-orange-500" />
+      <span className="absolute -top-1 -right-1 bg-orange-500 text-white text-[10px] w-4 h-4 flex items-center justify-center rounded-full">
+        2
+      </span>
+    </div>
+
+    {/* Dashboard / Profile Button */}
+<button
+  className="bg-[#EB855F] text-white px-4 py-2 rounded-md text-sm hover:bg-orange-500 transition"
+  onClick={() => router.push("/Homepage/Dashboard")}
+>
+  Dashboard
+</button>
+
+  </div>
+
+</div>
+        {/* <div className="hidden md:flex items-center justify-between px-6 py-3 bg-[#fdf4f2] mt-8"> */}
           {/* <div className="relative w-full max-w-md">
             <Search
               className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
@@ -204,7 +257,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               Dashboard
             </button>
           </div> */}
-        </div>
+        {/* </div> */}
 
         {/* Scrollable content */}
         <div className="flex-1 overflow-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
