@@ -51,8 +51,20 @@ export default function EventsPage() {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (!res.ok) return;
-        const data = await res.json();
-        if (data && data.id) setUserId(data.id);
+        // const data = await res.json();
+        // if (data && data.id) setUserId(data.id);
+
+        // const profileRes = await res.json();
+        // const profileData = profileRes.data;
+
+        // if (profileData && profileData._id) {
+        //   setUserId(profileData._id);
+        // }
+        const profileData = await res.json();
+
+        if (profileData && profileData._id) {
+          setUserId(profileData._id);
+        }
       } catch {}
     };
     fetchUserProfile();
@@ -70,7 +82,7 @@ export default function EventsPage() {
           `${BASE_URL}/events/user-events/${userId}/upcoming`,
           {
             headers: { Authorization: `Bearer ${token}` },
-          }
+          },
         );
         if (!res.ok) {
           setUserEventsError("Failed to fetch your events");
@@ -78,17 +90,19 @@ export default function EventsPage() {
           return;
         }
         const data = await res.json();
-        let eventsArray = data;
-        if (data && typeof data === "object" && !Array.isArray(data)) {
-          if (Array.isArray(data.events)) {
-            eventsArray = data.events;
-          } else if (Array.isArray(data.data)) {
-            eventsArray = data.data;
-          } else {
-            eventsArray = [];
-          }
-        }
-        setUserEvents(eventsArray);
+        // let eventsArray = data;
+        // if (data && typeof data === "object" && !Array.isArray(data)) {
+        //   if (Array.isArray(data.events)) {
+        //     eventsArray = data.events;
+        //   } else if (Array.isArray(data.data)) {
+        //     eventsArray = data.data;
+        //   } else {
+        //     eventsArray = [];
+        //   }
+        // }
+        // setUserEvents(eventsArray);
+        const userEventsData = data.events || [];
+        setUserEvents(userEventsData);
         console.log("userEvents API response:", data);
       } catch {
         setUserEventsError("Network error");
@@ -145,7 +159,7 @@ export default function EventsPage() {
             .toISOString()
             .split("T")[0];
           return eventDate === today;
-        })
+        }),
       );
     } else if (filter === "Tomorrow") {
       setFilteredEvents(
@@ -154,7 +168,7 @@ export default function EventsPage() {
             .toISOString()
             .split("T")[0];
           return eventDate === tomorrowDate;
-        })
+        }),
       );
     }
   };
@@ -294,7 +308,7 @@ export default function EventsPage() {
                         className="bg-orange-500 text-white text-xs px-3 py-1 rounded-md hover:bg-orange-600 cursor-pointer"
                         onClick={() =>
                           router.push(
-                            `/Homepage/Events/book?eventId=${event._id}`
+                            `/Homepage/Events/book?eventId=${event._id}`,
                           )
                         }
                       >
@@ -303,7 +317,7 @@ export default function EventsPage() {
                     </div>
                   </div>
                 </div>
-              )
+              ),
             )
           )}
         </div>
@@ -390,7 +404,7 @@ export default function EventsPage() {
                         className="bg-orange-500 text-white text-xs px-3 py-1 rounded-md hover:bg-orange-600 cursor-pointer"
                         onClick={() =>
                           router.push(
-                            `/Homepage/Events/book?eventId=${event._id}`
+                            `/Homepage/Events/book?eventId=${event._id}`,
                           )
                         }
                       >
@@ -399,7 +413,7 @@ export default function EventsPage() {
                     </div>
                   </div>
                 </div>
-              )
+              ),
             )
           )}
         </div>

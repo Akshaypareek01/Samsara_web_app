@@ -2,7 +2,18 @@
 
 import React, { useState, useEffect } from "react";
 import Image from "next/image";
-import { BookOpen, Menu, Calendar, Crown, Activity, Bell, Search, CalendarDays, Users, User } from "lucide-react";
+import {
+  BookOpen,
+  Menu,
+  Calendar,
+  Crown,
+  // Activity,
+  Bell,
+  Search,
+  CalendarDays,
+  Users,
+  User,
+} from "lucide-react";
 import { useRouter, usePathname } from "next/navigation";
 import Cookies from "js-cookie";
 import { BASE_URL } from "@/lib/utils";
@@ -144,11 +155,25 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           />
 
           <MenuItem
-  icon={<CalendarDays size={18} />}
-  label="Events"
-  isActive={pathname.startsWith("/Homepage/Events")}
-  onClick={() => router.push("/Homepage/Events")}
-/>
+            icon={<Users size={18} />}
+            label="Group Classes"
+            isActive={pathname.startsWith("/Homepage/Group")}
+            onClick={() => router.push("/Homepage/Group")}
+          />
+
+          <MenuItem
+            icon={<CalendarDays size={18} />}
+            label="Events"
+            isActive={pathname.startsWith("/Homepage/Events")}
+            onClick={() => router.push("/Homepage/Events")}
+          />
+
+          <MenuItem
+            icon={<User size={18} />}
+            label="1:1 Classes"
+            isActive={pathname.startsWith("/Homepage/onetoone")}
+            onClick={() => router.push("/Homepage/onetoone")}
+          />
 
           <MenuItem
             icon={<Crown size={18} />}
@@ -157,26 +182,13 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             onClick={() => router.push("/Homepage/Membership")}
           />
 
-<MenuItem
-  icon={<Users size={18} />}
-  label="Group Classes"
-  isActive={pathname.startsWith("/Homepage/Group")}
-  onClick={() => router.push("/Homepage/Group")}
-/>
-
-<MenuItem
-  icon={<User size={18} />}
-  label="1:1 Classes"
-  isActive={pathname.startsWith("/Homepage/onetoone")}
-  onClick={() => router.push("/Homepage/onetoone")}
-/>
-
-          <MenuItem
+          {/* <MenuItem
             icon={<Activity size={18} />}
             label="My Body"
             isActive={pathname.startsWith("/Homepage/Mybody")}
             onClick={() => router.push("/Homepage/Mybody")}
-          />
+          /> */}
+
           {/* <MenuItem
             icon={<Calendar size={18} />}
             label="Events"
@@ -222,45 +234,41 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Top bar */}
         {/* Top bar */}
-<div className="hidden md:flex items-center justify-between px-6 py-4 bg-[#fdf4f2] sticky top-0 z-20">
+        <div className="hidden md:flex items-center justify-between px-6 py-4 bg-[#fdf4f2] sticky top-0 z-20">
+          {/* Search */}
+          <div className="relative w-full max-w-xl">
+            <Search
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+              size={18}
+            />
+            <input
+              type="text"
+              placeholder="Search..."
+              className="w-full pl-10 pr-4 py-2 rounded-full bg-white border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
+            />
+          </div>
 
-  {/* Search */}
-  <div className="relative w-full max-w-xl">
-    <Search
-      className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
-      size={18}
-    />
-    <input
-      type="text"
-      placeholder="Search..."
-      className="w-full pl-10 pr-4 py-2 rounded-full bg-white border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
-    />
-  </div>
+          {/* Right Side Icons */}
+          <div className="flex items-center gap-4 ml-6">
+            {/* Notification */}
+            <div className="relative cursor-pointer">
+              <Bell size={20} className="text-gray-600 hover:text-orange-500" />
+              <span className="absolute -top-1 -right-1 bg-orange-500 text-white text-[10px] w-4 h-4 flex items-center justify-center rounded-full">
+                2
+              </span>
+            </div>
 
-  {/* Right Side Icons */}
-  <div className="flex items-center gap-4 ml-6">
-
-    {/* Notification */}
-    <div className="relative cursor-pointer">
-      <Bell size={20} className="text-gray-600 hover:text-orange-500" />
-      <span className="absolute -top-1 -right-1 bg-orange-500 text-white text-[10px] w-4 h-4 flex items-center justify-center rounded-full">
-        2
-      </span>
-    </div>
-
-    {/* Dashboard / Profile Button */}
-<button
-  className="bg-[#EB855F] text-white px-4 py-2 rounded-md text-sm hover:bg-orange-500 transition"
-  onClick={() => router.push("/Homepage/Dashboard")}
->
-  Dashboard
-</button>
-
-  </div>
-
-</div>
+            {/* Dashboard / Profile Button */}
+            {/* <button
+              className="bg-[#EB855F] text-white px-4 py-2 rounded-md text-sm hover:bg-orange-500 transition"
+              onClick={() => router.push("/Homepage/Dashboard")}
+            >
+              Dashboard
+            </button> */}
+          </div>
+        </div>
         {/* <div className="hidden md:flex items-center justify-between px-6 py-3 bg-[#fdf4f2] mt-8"> */}
-          {/* <div className="relative w-full max-w-md">
+        {/* <div className="relative w-full max-w-md">
             <Search
               className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
               size={18}
