@@ -610,7 +610,7 @@ function ClassDetailsContent({ classId }: { classId: string }) {
               )}
 
               {/* Student Join Button - Show only for students (not teachers who created the class) */}
-              {classData.status && !isClassCreator() && (
+              {classData.status && classData.meeting_number && !isClassCreator() && (
                 <div>
                   <button
                     onClick={handleJoinClass}

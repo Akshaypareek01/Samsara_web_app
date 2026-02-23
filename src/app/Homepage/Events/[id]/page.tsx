@@ -48,7 +48,11 @@ interface EventData {
   updatedAt: string;
 }
 
-export default function EventDetailsPage({ params }: { params: Promise<{ id: string }> }) {
+export default function EventDetailsPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
   const [eventId, setEventId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -75,7 +79,9 @@ function EventDetailsContent({ eventId }: { eventId: string }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [joiningEvent, setJoiningEvent] = useState(false);
+  const [isEnrolled, setIsEnrolled] = useState(false);
   const [userProfile, setUserProfile] = useState<{
+    _id: string;
     name?: string;
     email?: string;
   } | null>(null);
@@ -114,6 +120,32 @@ function EventDetailsContent({ eventId }: { eventId: string }) {
     fetchEventDetails();
   }, [eventId]);
 
+  //check enrollment
+  useEffect(() => {
+    if (!eventData?._id || !userProfile?._id) return;
+
+    const check = async () => {
+      const token = getCookie("accessToken");
+
+      const res = await fetch(
+        `${BASE_URL}/events/enrollment/${eventData._id}/${userProfile._id}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      );
+
+      const data = await res.json();
+
+      if (data.success) {
+        setIsEnrolled(data.enrolled);
+      }
+    };
+
+    check();
+  }, [eventData, userProfile]);
+
   // Fetch user profile
   useEffect(() => {
     const fetchUserProfile = async () => {
@@ -130,7 +162,8 @@ function EventDetailsContent({ eventId }: { eventId: string }) {
 
         if (response.ok) {
           const data = await response.json();
-          setUserProfile(data);
+          // setUserProfile(data);
+          setUserProfile(data.data || data);
         }
       } catch (error) {
         console.error("Error fetching user profile:", error);
@@ -142,9 +175,9 @@ function EventDetailsContent({ eventId }: { eventId: string }) {
 
   const handleJoinEvent = async () => {
     if (!eventData) return;
-    
+
     setJoiningEvent(true);
-    
+
     try {
       // Check if meeting number exists
       if (!eventData.meeting_number) {
@@ -163,12 +196,13 @@ function EventDetailsContent({ eventId }: { eventId: string }) {
       };
 
       console.log("Event Data ===>", ZoomMeetingNumber);
-      
+
       const zoomMeetingNumberString = JSON.stringify(ZoomMeetingNumber);
-      
+
       // Navigate to webview page with meeting data
-      router.push(`/Homepage/ZoomWebView?ZoomMeetingNumber=${encodeURIComponent(zoomMeetingNumberString)}`);
-      
+      router.push(
+        `/Homepage/ZoomWebView?ZoomMeetingNumber=${encodeURIComponent(zoomMeetingNumberString)}`,
+      );
     } catch (error) {
       console.error("Error joining event:", error);
       alert("Error opening event. Please try again.");
@@ -191,7 +225,9 @@ function EventDetailsContent({ eventId }: { eventId: string }) {
     return (
       <div className="p-6 md:p-12 bg-white">
         <div className="flex items-center justify-center h-64">
-          <div className="text-lg text-red-500">Error: {error || "Event not found"}</div>
+          <div className="text-lg text-red-500">
+            Error: {error || "Event not found"}
+          </div>
         </div>
       </div>
     );
@@ -224,12 +260,14 @@ function EventDetailsContent({ eventId }: { eventId: string }) {
             <span className="text-sm px-3 py-1 bg-white/90 text-gray-700 rounded-full">
               {eventData.type}
             </span>
-            <span className={`text-sm px-3 py-1 rounded-full ${
-              eventData.status 
-                ? 'bg-green-100 text-green-600' 
-                : 'bg-gray-100 text-gray-600'
-            }`}>
-              {eventData.status ? 'Active' : 'Inactive'}
+            <span
+              className={`text-sm px-3 py-1 rounded-full ${
+                eventData.status
+                  ? "bg-green-100 text-green-600"
+                  : "bg-gray-100 text-gray-600"
+              }`}
+            >
+              {eventData.status ? "Active" : "Inactive"}
             </span>
           </div>
         </div>
@@ -240,8 +278,12 @@ function EventDetailsContent({ eventId }: { eventId: string }) {
           <div className="lg:col-span-2 space-y-8">
             {/* Event Title & Description */}
             <div>
-              <h2 className="text-3xl font-bold text-gray-900 mb-4">{eventData.eventName}</h2>
-              <p className="text-lg text-gray-600 leading-relaxed">{eventData.details}</p>
+              <h2 className="text-3xl font-bold text-gray-900 mb-4">
+                {eventData.eventName}
+              </h2>
+              <p className="text-lg text-gray-600 leading-relaxed">
+                {eventData.details}
+              </p>
             </div>
 
             {/* Teacher Section */}
@@ -256,14 +298,23 @@ function EventDetailsContent({ eventId }: { eventId: string }) {
                   className="rounded-full object-cover"
                 />
                 <div className="flex-1">
-                  <h4 className="text-xl font-semibold text-gray-900">{eventData.teacher.name}</h4>
-                  <p className="text-gray-600 mb-3">{eventData.teacher.teacherCategory}</p>
+                  <h4 className="text-xl font-semibold text-gray-900">
+                    {eventData.teacher.name}
+                  </h4>
+                  <p className="text-gray-600 mb-3">
+                    {eventData.teacher.teacherCategory}
+                  </p>
                   {eventData.teacher.AboutMe && (
-                    <p className="text-gray-600 mb-3">{eventData.teacher.AboutMe}</p>
+                    <p className="text-gray-600 mb-3">
+                      {eventData.teacher.AboutMe}
+                    </p>
                   )}
                   <div className="flex flex-wrap gap-2">
                     {eventData.teacher.expertise.map((skill, idx) => (
-                      <span key={idx} className="text-sm px-3 py-1 bg-orange-100 text-orange-600 rounded-full">
+                      <span
+                        key={idx}
+                        className="text-sm px-3 py-1 bg-orange-100 text-orange-600 rounded-full"
+                      >
                         {skill}
                       </span>
                     ))}
@@ -276,23 +327,33 @@ function EventDetailsContent({ eventId }: { eventId: string }) {
             {eventData.howItWillHelp && eventData.howItWillHelp !== "." && (
               <div>
                 <h3 className="text-xl font-semibold mb-4">How It Will Help</h3>
-                <p className="text-gray-600 leading-relaxed">{eventData.howItWillHelp}</p>
+                <p className="text-gray-600 leading-relaxed">
+                  {eventData.howItWillHelp}
+                </p>
               </div>
             )}
 
             {/* Who It's For */}
             {eventData.whoitsfor && eventData.whoitsfor !== "." && (
               <div>
-                <h3 className="text-xl font-semibold mb-4">Who It&apos;s For</h3>
-                <p className="text-gray-600 leading-relaxed">{eventData.whoitsfor}</p>
+                <h3 className="text-xl font-semibold mb-4">
+                  Who It&apos;s For
+                </h3>
+                <p className="text-gray-600 leading-relaxed">
+                  {eventData.whoitsfor}
+                </p>
               </div>
             )}
 
             {/* Who It's Not For */}
             {eventData.whoitsnotfor && eventData.whoitsnotfor !== "." && (
               <div>
-                <h3 className="text-xl font-semibold mb-4">Who It&apos;s Not For</h3>
-                <p className="text-gray-600 leading-relaxed">{eventData.whoitsnotfor}</p>
+                <h3 className="text-xl font-semibold mb-4">
+                  Who It&apos;s Not For
+                </h3>
+                <p className="text-gray-600 leading-relaxed">
+                  {eventData.whoitsnotfor}
+                </p>
               </div>
             )}
           </div>
@@ -307,7 +368,9 @@ function EventDetailsContent({ eventId }: { eventId: string }) {
                   <Calendar className="w-5 h-5 text-orange-500" />
                   <div>
                     <p className="font-medium">Date</p>
-                    <p className="text-gray-600">{new Date(eventData.startDate).toLocaleDateString()}</p>
+                    <p className="text-gray-600">
+                      {new Date(eventData.startDate).toLocaleDateString()}
+                    </p>
                   </div>
                 </div>
                 <div className="flex items-center space-x-3">
@@ -328,14 +391,18 @@ function EventDetailsContent({ eventId }: { eventId: string }) {
                   <Users className="w-5 h-5 text-orange-500" />
                   <div>
                     <p className="font-medium">Capacity</p>
-                    <p className="text-gray-600">Max {eventData.availableseats} participants</p>
+                    <p className="text-gray-600">
+                      Max {eventData.availableseats} participants
+                    </p>
                   </div>
                 </div>
                 <div className="flex items-center space-x-3">
                   <User className="w-5 h-5 text-orange-500" />
                   <div>
                     <p className="font-medium">Enrolled</p>
-                    <p className="text-gray-600">{eventData.students.length} participants</p>
+                    <p className="text-gray-600">
+                      {eventData.students.length} participants
+                    </p>
                   </div>
                 </div>
               </div>
@@ -367,7 +434,7 @@ function EventDetailsContent({ eventId }: { eventId: string }) {
             </div>
 
             {/* Join Button */}
-            {eventData.status && (
+            {/* {eventData.status && (
               <div className="sticky top-4">
                 <button
                   onClick={handleJoinEvent}
@@ -380,7 +447,42 @@ function EventDetailsContent({ eventId }: { eventId: string }) {
                   {eventData.students.length} participants enrolled
                 </p>
               </div>
-            )}
+            )} */}
+
+            {/* Event Action Button */}
+            <div className="sticky top-4">
+              {!isEnrolled ? (
+                <button
+                  onClick={() =>
+                    router.push(
+                      `/Homepage/Events/book?eventId=${eventData._id}`,
+                    )
+                  }
+                  className="w-full bg-orange-500 text-white py-4 px-6 rounded-xl text-lg font-semibold"
+                >
+                  Register
+                </button>
+              ) : eventData.status ? (
+                <button
+                  onClick={handleJoinEvent}
+                  disabled={joiningEvent}
+                  className="w-full bg-green-500 text-white py-4 px-6 rounded-xl text-lg font-semibold"
+                >
+                  {joiningEvent ? "Joining..." : "Join Event"}
+                </button>
+              ) : (
+                <button
+                  disabled
+                  className="w-full bg-gray-300 text-gray-700 py-4 px-6 rounded-xl text-lg font-semibold"
+                >
+                  Waiting for Host to Start
+                </button>
+              )}
+
+              <p className="text-sm text-gray-500 text-center mt-2">
+                {eventData.students.length} participants enrolled
+              </p>
+            </div>
           </div>
         </div>
       </div>

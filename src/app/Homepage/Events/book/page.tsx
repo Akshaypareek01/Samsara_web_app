@@ -77,7 +77,7 @@ interface EventDetails {
 }
 
 interface UserProfile {
-  id: string;
+  _id: string;
   name: string;
   email: string;
   role: string;
@@ -134,7 +134,7 @@ function EventsPageContent() {
         setUserProfile(data);
       } catch (err) {
         setError(
-          err instanceof Error ? err.message : "Failed to fetch user profile"
+          err instanceof Error ? err.message : "Failed to fetch user profile",
         );
       }
     };
@@ -175,7 +175,7 @@ function EventsPageContent() {
 
   // Register for event
   const handleRegister = async () => {
-    if (!userProfile?.id || !eventDetails?._id) {
+    if (!userProfile?._id || !eventDetails?._id) {
       showToast("User or event information not available", "error");
       return;
     }
@@ -191,8 +191,8 @@ function EventsPageContent() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          eventId: eventDetails._id,
-          userId: userProfile.id,
+          eventId: eventDetails._id.toString(),
+          userId: userProfile._id.toString(),
         }),
       });
 
@@ -211,7 +211,7 @@ function EventsPageContent() {
     } catch (err) {
       showToast(
         err instanceof Error ? err.message : "Failed to register for event",
-        "error"
+        "error",
       );
     } finally {
       setRegistering(false);
@@ -251,9 +251,9 @@ function EventsPageContent() {
 
   // Check if user is already enrolled
   const isUserEnrolled = () => {
-    if (!userProfile?.id || !eventDetails?.students) return false;
+    if (!userProfile?._id || !eventDetails?.students) return false;
     return eventDetails.students.some(
-      (student) => student._id === userProfile.id
+      (student) => student._id === userProfile._id,
     );
   };
 

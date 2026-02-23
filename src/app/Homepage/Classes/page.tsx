@@ -214,7 +214,7 @@ const totalHours =
 
         // Fetch all classes
         const allClassesResponse = await fetch(
-          `${BASE_URL}/classes/student/${profileData.id}/classes`,
+          `${BASE_URL}/classes/student/${profileData.id}/classes/upcoming`,
           {
             headers: {
               Authorization: `Bearer ${accessToken}`,

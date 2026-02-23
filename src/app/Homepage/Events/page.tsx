@@ -119,7 +119,7 @@ export default function EventsPage() {
       setError("");
       try {
         const token = Cookies.get("accessToken");
-        const res = await fetch(`${BASE_URL}/events`, {
+        const res = await fetch(`${BASE_URL}/events/upcoming`, {
           headers: {
             Authorization: `Bearer ${token}`,
           },
@@ -308,7 +308,7 @@ export default function EventsPage() {
                         className="bg-orange-500 text-white text-xs px-3 py-1 rounded-md hover:bg-orange-600 cursor-pointer"
                         onClick={() =>
                           router.push(
-                            `/Homepage/Events/book?eventId=${event._id}`,
+                            `//Homepage/Events/${event._id}`,
                           )
                         }
                       >
@@ -404,7 +404,7 @@ export default function EventsPage() {
                         className="bg-orange-500 text-white text-xs px-3 py-1 rounded-md hover:bg-orange-600 cursor-pointer"
                         onClick={() =>
                           router.push(
-                            `/Homepage/Events/book?eventId=${event._id}`,
+                            `/Homepage/Events/${event._id}`,
                           )
                         }
                       >

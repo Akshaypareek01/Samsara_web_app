@@ -145,7 +145,7 @@ export default function ClassCard({
             >
               Details
             </button>
-            {classItem.status && (
+            {classItem.status && classItem.meeting_number &&  (
               <button 
                 onClick={() => onJoinClass(classItem._id)}
                 disabled={joiningClass === classItem._id}
