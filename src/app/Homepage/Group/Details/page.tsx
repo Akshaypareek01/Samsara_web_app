@@ -77,7 +77,7 @@ export default function ClassDetailsPage() {
       const token = Cookies.get("accessToken");
 
       const res = await fetch(
-        `${BASE_URL}/classes/enrollment/${classId}/${userId}`,
+        `${BASE_URL}/classes/class/${classId}/student/${userId}/enrolled`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -86,6 +86,8 @@ export default function ClassDetailsPage() {
       );
 
       const data = await res.json();
+
+      console.log("ENROLL CHECK:", data);
 
       if (data.success) {
         setIsEnrolled(data.enrolled);
@@ -97,25 +99,65 @@ export default function ClassDetailsPage() {
 
   // Register class
   const handleRegister = async () => {
+    console.log("REGISTER CLICKED");
+    console.log("CLASS ID:", classId);
+    console.log("USER ID:", userId);
+
+    if (!classId || !userId) {
+      alert("User not loaded yet. Please wait 2 seconds and try again.");
+      return;
+    }
+
     setJoining(true);
 
-    const token = Cookies.get("accessToken");
+    try {
+      const token = Cookies.get("accessToken");
 
-    await fetch(`${BASE_URL}/classes/register`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        classId,
-        studentId: userId,
-      }),
-    });
+      const res = await fetch(
+        `${BASE_URL}/classes/${classId}/add-student/${userId}`,
+        {
+          method: "PUT",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      );
 
-    setIsEnrolled(true);
-    setJoining(false);
+      const data = await res.json();
+      console.log("REGISTER RESPONSE:", data);
+
+      if (res.ok) {
+        alert("Successfully Registered!");
+        setIsEnrolled(true);
+      } else {
+        alert(data.message || "Registration failed");
+      }
+    } catch (err) {
+      console.error("Registration error:", err);
+    } finally {
+      setJoining(false);
+    }
   };
+  // const handleRegister = async () => {
+  //   setJoining(true);
+
+  //   const token = Cookies.get("accessToken");
+
+  //   await fetch(`${BASE_URL}/classes/register`, {
+  //     method: "POST",
+  //     headers: {
+  //       Authorization: `Bearer ${token}`,
+  //       "Content-Type": "application/json",
+  //     },
+  //     body: JSON.stringify({
+  //       classId,
+  //       studentId: userId,
+  //     }),
+  //   });
+
+  //   setIsEnrolled(true);
+  //   setJoining(false);
+  // };
 
   // Join class
   const handleJoin = () => {
@@ -152,9 +194,7 @@ export default function ClassDetailsPage() {
         className="rounded-xl w-full h-64 object-cover"
       />
 
-      <h2 className="text-2xl font-semibold">
-        {classData.title || "Class"}
-      </h2>
+      <h2 className="text-2xl font-semibold">{classData.title || "Class"}</h2>
 
       <p className="text-gray-600">
         {/* {classData.details || "No description available"} */}
@@ -162,9 +202,12 @@ export default function ClassDetailsPage() {
       </p>
 
       {!isEnrolled ? (
+        // <button
+        //   onClick={handleRegister}
+        //   disabled={joining}
         <button
           onClick={handleRegister}
-          disabled={joining}
+          disabled={joining || !userId}
           className="w-full bg-orange-500 text-white py-3 rounded-md"
         >
           {joining ? "Registering..." : "Register"}

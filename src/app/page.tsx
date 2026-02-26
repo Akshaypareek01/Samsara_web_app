@@ -281,7 +281,7 @@ export default function Home() {
 
         {step !== "success" && (
           <div className="auth-footer">
-            <p>Copyright © 2025 Samsara Wellness. All rights reserved.</p>
+            <p>Copyright © 2026 Samsara Wellness. All rights reserved.</p>
             <p>Powered by Samsaraa WellTek Pvt Ltd</p>
           </div>
         )}
