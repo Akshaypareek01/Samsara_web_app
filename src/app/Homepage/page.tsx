@@ -69,7 +69,7 @@ export default function WellnessDashboard() {
         {/* Footer */}
         <p className="text-center text-xs text-gray-400 mt-6 pt-4 border-t border-gray-100">
           Copyright© 2025 Samsara Wellness. All rights reserved. Powered by
-          Samsara innovations
+          Samsaraa WellTek Pvt Ltd
         </p>
       </div>
     </div>

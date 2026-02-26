@@ -4,6 +4,8 @@ import Image from "next/image";
 import { Clock, DollarSign, Users } from "lucide-react";
 import { useEffect, useState } from "react";
 import { BASE_URL } from "@/lib/utils";
+import Cookies from "js-cookie";
+import { useRouter } from "next/navigation";
 
 interface ClassType {
   _id?: string;
@@ -18,35 +20,181 @@ interface ClassType {
 }
 
 export default function ClassesPage() {
+  const router = useRouter();
   const [classes, setClasses] = useState<ClassType[]>([]);
+  const [myClasses, setMyClasses] = useState<ClassType[]>([]);
   const [filteredClasses, setFilteredClasses] = useState<ClassType[]>([]);
   const [selectedFilter, setSelectedFilter] = useState("All");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [userId, setUserId] = useState<string | null>(null);
+
+  // useEffect(() => {
+  //   const fetchClasses = async () => {
+  //     setLoading(true);
+  //     setError("");
+  //     try {
+  //       const res = await fetch(`${BASE_URL}/classes`);
+  //       const data = await res.json();
+  //       let classArray = data;
+  //       if (data && typeof data === "object" && !Array.isArray(data)) {
+  //         if (Array.isArray(data.data)) classArray = data.data;
+  //         else if (Array.isArray(data.classes)) classArray = data.classes;
+  //         else classArray = [];
+  //       }
+  //       setClasses(classArray);
+  //       setFilteredClasses(classArray); // Initialize filtered classes
+  //     } catch {
+  //       setError("Failed to fetch classes");
+  //     } finally {
+  //       setLoading(false);
+  //     }
+  //   };
+  //   fetchClasses();
+  // }, []);
 
   useEffect(() => {
-    const fetchClasses = async () => {
-      setLoading(true);
-      setError("");
-      try {
-        const res = await fetch(`${BASE_URL}/classes`);
-        const data = await res.json();
-        let classArray = data;
-        if (data && typeof data === "object" && !Array.isArray(data)) {
-          if (Array.isArray(data.data)) classArray = data.data;
-          else if (Array.isArray(data.classes)) classArray = data.classes;
-          else classArray = [];
-        }
-        setClasses(classArray);
-        setFilteredClasses(classArray); // Initialize filtered classes
-      } catch {
-        setError("Failed to fetch classes");
-      } finally {
-        setLoading(false);
+    const fetchProfile = async () => {
+      const token = Cookies.get("accessToken");
+      if (!token) return;
+
+      const res = await fetch(`${BASE_URL}/users/profile`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      const data = await res.json();
+
+      if (data?._id) {
+        setUserId(data._id);
       }
     };
-    fetchClasses();
+
+    fetchProfile();
   }, []);
+
+  // Fetch upcoming classes for the logged-in student after userId is available from profile
+  // useEffect(() => {
+  //   if (!userId) return;
+
+  //   const fetchClasses = async () => {
+  //     setLoading(true);
+  //     setError("");
+
+  //     try {
+  //       const token = Cookies.get("accessToken");
+
+  //       const res = await fetch(
+  //         `${BASE_URL}/classes/student/${userId}/classes/upcoming`,
+  //         {
+  //           headers: {
+  //             Authorization: `Bearer ${token}`,
+  //           },
+  //         },
+  //       );
+
+  //       const data = await res.json();
+
+  //       const classArray = data.classes || [];
+
+  //       setClasses(classArray);
+  //       setFilteredClasses(classArray);
+  //     } catch {
+  //       setError("Failed to fetch classes");
+  //     } finally {
+  //       setLoading(false);
+  //     }
+  //   };
+
+  //   fetchClasses();
+  // }, [userId]);
+
+// Fetch all available classes to display in Group page
+useEffect(() => {
+  const fetchClasses = async () => {
+    setLoading(true);
+    setError("");
+
+    try {
+      const token = Cookies.get("accessToken");
+
+      const res = await fetch(`${BASE_URL}/classes`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      const data = await res.json();
+
+      const classArray = data.data || [];
+
+      setClasses(classArray);
+      setFilteredClasses(classArray);
+    } catch {
+      setError("Failed to fetch classes");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  fetchClasses();
+}, []);
+
+  // Fetch all enrolled classes for My Classes section
+  useEffect(() => {
+  if (!userId) return;
+
+  const fetchMyClasses = async () => {
+    try {
+      const token = Cookies.get("accessToken");
+
+      const res = await fetch(`${BASE_URL}/classes`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      const data = await res.json();
+
+      const enrolledClasses =
+        (data.data || []).filter((cls: any) =>
+          cls.students?.some((s: any) => s._id === userId)
+        );
+
+      setMyClasses(enrolledClasses);
+    } catch (err) {
+      console.log("Failed to fetch my classes", err);
+    }
+  };
+
+  fetchMyClasses();
+}, [userId]);
+  // useEffect(() => {
+  //   if (!userId) return;
+
+  //   const fetchMyClasses = async () => {
+  //     try {
+  //       const token = Cookies.get("accessToken");
+
+  //       const res = await fetch(
+  //         `${BASE_URL}/classes/student/${userId}/classes`,
+  //         {
+  //           headers: {
+  //             Authorization: `Bearer ${token}`,
+  //           },
+  //         },
+  //       );
+
+  //       const data = await res.json();
+  //       setMyClasses(data.classes || []);
+  //     } catch (err) {
+  //       console.log("Failed to fetch my classes", err);
+  //     }
+  //   };
+
+  //   fetchMyClasses();
+  // }, [userId]);
 
   // Filter classes based on selected filter
   const filterClasses = (filter: string) => {
@@ -76,7 +224,7 @@ export default function ClassesPage() {
           }
           // If no date info, assume it's today's class
           return true;
-        })
+        }),
       );
     } else if (filter === "Tomorrow") {
       setFilteredClasses(
@@ -94,7 +242,7 @@ export default function ClassesPage() {
           }
           // If no date info, assume it's not tomorrow's class
           return false;
-        })
+        }),
       );
     }
   };
@@ -111,11 +259,18 @@ export default function ClassesPage() {
       <div className="bg-white rounded-xl shadow-md p-6 w-full max-w-6xl space-y-8">
         {/* Banner Section */}
         <div className="relative w-full h-[220px] rounded-lg overflow-hidden">
-          <Image
+          {/* <Image
             src="/images/peoples.svg"
             alt="Upcoming Classes"
             layout="fill"
             objectFit="cover"
+            className="brightness-[0.6] rounded-lg"
+          /> */}
+          <Image
+            src="/images/peoples.svg"
+            alt="Upcoming Classes"
+            fill
+            style={{ objectFit: "cover" }}
             className="brightness-[0.6] rounded-lg"
           />
           <div className="absolute inset-0 flex items-center justify-start px-8">
@@ -177,11 +332,18 @@ export default function ClassesPage() {
               >
                 {/* Card Image */}
                 <div className="relative h-[150px] w-full">
-                  <Image
+                  {/* <Image
                     src={item.image || "/images/class1.svg"}
                     alt={item.title || "Class Thumbnail"}
                     layout="fill"
                     objectFit="cover"
+                    className="rounded-t-xl"
+                  /> */}
+                  <Image
+                    src={item.image || "/images/class1.svg"}
+                    alt={item.title || "Class Thumbnail"}
+                    fill
+                    style={{ objectFit: "cover" }}
                     className="rounded-t-xl"
                   />
                   {item.status === "live" && (
@@ -225,8 +387,18 @@ export default function ClassesPage() {
                       <Users size={14} />
                       {item.availableseats || 0} spots left
                     </div>
-                    <button className="bg-orange-500 text-white text-xs px-3 py-1 rounded-md hover:bg-orange-600 cursor-pointer">
+                    {/* <button className="bg-orange-500 text-white text-xs px-3 py-1 rounded-md hover:bg-orange-600 cursor-pointer">
                       Join
+                    </button> */}
+                    <button
+                      onClick={() =>
+                        router.push(
+                          `/Homepage/Group/Details?classId=${item._id}`,
+                        )
+                      }
+                      className="bg-orange-500 text-white text-xs px-3 py-1 rounded-md hover:bg-orange-600"
+                    >
+                      View
                     </button>
                   </div>
                 </div>
@@ -247,51 +419,47 @@ export default function ClassesPage() {
           </div>
 
           {/* Class List */}
-          {[
-            {
-              title: "Morning Flow",
-              time: "Tomorrow, 7:00 AM",
-              location: "Online",
-              enrolled: 25,
-              img: "https://images.unsplash.com/photo-1502685104226-ee32379fefbe?auto=format&fit=facearea&facepad=3&w=64&h=64&q=80",
-            },
-            {
-              title: "Evening Meditation",
-              time: "Friday, 6:00 PM",
-              location: "Bandra Center",
-              enrolled: 18,
-              img: "https://images.unsplash.com/photo-1502685104226-ee32379fefbe?auto=format&fit=facearea&facepad=3&w=64&h=64&q=80",
-            },
-          ].map((classItem, index) => (
-            <div
-              key={index}
-              className="flex justify-between items-center bg-gray-50 rounded-lg px-4 py-3"
-            >
-              {/* Left Side */}
-              <div className="flex gap-3 items-center">
-                <Image
-                  src={classItem.img}
-                  alt={classItem.title}
-                  width={48}
-                  height={48}
-                  className="rounded-lg object-cover"
-                />
-                <div>
-                  <h4 className="text-sm font-medium">{classItem.title}</h4>
-                  <p className="text-xs text-gray-500">{classItem.time}</p>
-                  <div className="flex items-center gap-4 text-xs text-gray-400 mt-1">
-                    <span>📍 {classItem.location}</span>
-                    <span>👥 {classItem.enrolled} Enrolled</span>
+          {myClasses.length === 0 ? (
+            <p className="text-sm text-gray-500">No enrolled classes yet.</p>
+          ) : (
+            myClasses.map((classItem: ClassType, index: number) => (
+              <div
+                key={classItem._id || index}
+                className="flex justify-between items-center bg-gray-50 rounded-lg px-4 py-3"
+              >
+                <div className="flex gap-3 items-center">
+                  <Image
+                    src={classItem.image || "/images/class1.svg"}
+                    alt={classItem.title || "Class Thumbnail"}
+                    width={48}
+                    height={48}
+                    className="rounded-lg object-cover"
+                  />
+                  <div>
+                    <h4 className="text-sm font-medium">
+                      {classItem.title || "Class"}
+                    </h4>
+                    <p className="text-xs text-gray-500">
+                      {classItem.startDate
+                        ? new Date(classItem.startDate).toLocaleString()
+                        : "No date"}
+                    </p>
                   </div>
                 </div>
-              </div>
 
-              {/* Right Side Button */}
-              <button className="text-sm border px-3 py-1 rounded-md text-gray-700 hover:bg-gray-100">
-                View Details →
-              </button>
-            </div>
-          ))}
+                <button
+                  onClick={() =>
+                    router.push(
+                      `/Homepage/Group/Details?classId=${classItem._id}`,
+                    )
+                  }
+                  className="text-sm border px-3 py-1 rounded-md text-gray-700 hover:bg-gray-100"
+                >
+                  View Details →
+                </button>
+              </div>
+            ))
+          )}
         </div>
       </div>
     </div>

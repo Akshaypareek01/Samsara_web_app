@@ -12,8 +12,10 @@ import {
   Search,
   CalendarDays,
   Users,
-  User,
+  House,
+  // User,
 } from "lucide-react";
+
 import { useRouter, usePathname } from "next/navigation";
 import Cookies from "js-cookie";
 import { BASE_URL } from "@/lib/utils";
@@ -135,6 +137,13 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           )}
 
           <MenuItem
+            icon={<House size={18} />}
+            label="Home"
+            isActive={pathname.startsWith("/Homepage")}
+            onClick={() => router.push("/Homepage")}
+          />
+
+          <MenuItem
             icon={<Calendar size={18} />}
             label="Profile"
             isActive={pathname === "/Homepage/Dashboard/UserProfile"}
@@ -168,12 +177,12 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             onClick={() => router.push("/Homepage/Events")}
           />
 
-          <MenuItem
+          {/* <MenuItem
             icon={<User size={18} />}
             label="1:1 Classes"
             isActive={pathname.startsWith("/Homepage/onetoone")}
             onClick={() => router.push("/Homepage/onetoone")}
-          />
+          /> */}
 
           <MenuItem
             icon={<Crown size={18} />}
