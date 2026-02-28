@@ -19,33 +19,15 @@ export default function ClassDetailsPage() {
   const router = useRouter();
 
   const classId = searchParams.get("classId");
+const user = JSON.parse(Cookies.get("user") || "{}");
+const studentId = user?.id;
 
   const [classData, setClassData] = useState<ClassType | null>(null);
   const [isEnrolled, setIsEnrolled] = useState(false);
   const [joining, setJoining] = useState(false);
-  const [userId, setUserId] = useState<string | null>(null);
 
-  // Fetch logged in user
-  useEffect(() => {
-    const fetchProfile = async () => {
-      const token = Cookies.get("accessToken");
-      if (!token) return;
 
-      const res = await fetch(`${BASE_URL}/users/profile`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
 
-      const data = await res.json();
-
-      if (data?._id) {
-        setUserId(data._id);
-      }
-    };
-
-    fetchProfile();
-  }, []);
 
   // Fetch class details
   useEffect(() => {
@@ -70,94 +52,58 @@ export default function ClassDetailsPage() {
   }, [classId]);
 
   // Check if student is enrolled
-  useEffect(() => {
-    if (!classId || !userId) return;
+useEffect(() => {
+  if (!classId || !studentId) return;
 
-    const checkEnrollment = async () => {
-      const token = Cookies.get("accessToken");
+  const checkEnrollment = async () => {
+    const token = Cookies.get("accessToken");
 
-      const res = await fetch(
-        `${BASE_URL}/classes/class/${classId}/student/${userId}/enrolled`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+    const res = await fetch(
+      `${BASE_URL}/classes/class/${classId}/student/${studentId}/enrolled`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
         },
-      );
-
-      const data = await res.json();
-
-      console.log("ENROLL CHECK:", data);
-
-      if (data.success) {
-        setIsEnrolled(data.enrolled);
       }
-    };
+    );
 
-    checkEnrollment();
-  }, [classId, userId]);
+    const data = await res.json();
 
-  // Register class
-  const handleRegister = async () => {
-    console.log("REGISTER CLICKED");
-    console.log("CLASS ID:", classId);
-    console.log("USER ID:", userId);
-
-    if (!classId || !userId) {
-      alert("User not loaded yet. Please wait 2 seconds and try again.");
-      return;
-    }
-
-    setJoining(true);
-
-    try {
-      const token = Cookies.get("accessToken");
-
-      const res = await fetch(
-        `${BASE_URL}/classes/${classId}/add-student/${userId}`,
-        {
-          method: "PUT",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        },
-      );
-
-      const data = await res.json();
-      console.log("REGISTER RESPONSE:", data);
-
-      if (res.ok) {
-        alert("Successfully Registered!");
-        setIsEnrolled(true);
-      } else {
-        alert(data.message || "Registration failed");
-      }
-    } catch (err) {
-      console.error("Registration error:", err);
-    } finally {
-      setJoining(false);
-    }
+    setIsEnrolled(data?.enrolled === true);
   };
-  // const handleRegister = async () => {
-  //   setJoining(true);
 
-  //   const token = Cookies.get("accessToken");
+  checkEnrollment();
+}, [classId, studentId]);
 
-  //   await fetch(`${BASE_URL}/classes/register`, {
-  //     method: "POST",
-  //     headers: {
-  //       Authorization: `Bearer ${token}`,
-  //       "Content-Type": "application/json",
-  //     },
-  //     body: JSON.stringify({
-  //       classId,
-  //       studentId: userId,
-  //     }),
-  //   });
+// Register class
+const handleRegister = async () => {
+  if (!classId || !studentId) return;
 
-  //   setIsEnrolled(true);
-  //   setJoining(false);
-  // };
+  setJoining(true);
+
+  try {
+    const token = Cookies.get("accessToken");
+
+    const res = await fetch(
+      `${BASE_URL}/classes/${classId}/add-student/${studentId}`,
+      {
+        method: "PUT",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+
+    if (res.ok) {
+      setIsEnrolled(true);
+    }
+
+  } catch (err) {
+    console.log(err);
+  } finally {
+    setJoining(false);
+  }
+};
 
   // Join class
   const handleJoin = () => {
@@ -202,12 +148,9 @@ export default function ClassDetailsPage() {
       </p>
 
       {!isEnrolled ? (
-        // <button
-        //   onClick={handleRegister}
-        //   disabled={joining}
         <button
           onClick={handleRegister}
-          disabled={joining || !userId}
+          disabled={joining}
           className="w-full bg-orange-500 text-white py-3 rounded-md"
         >
           {joining ? "Registering..." : "Register"}

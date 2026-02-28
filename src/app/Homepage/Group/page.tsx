@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { BASE_URL } from "@/lib/utils";
 import Cookies from "js-cookie";
 import { useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 
 interface ClassType {
   _id?: string;
@@ -27,174 +28,70 @@ export default function ClassesPage() {
   const [selectedFilter, setSelectedFilter] = useState("All");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [userId, setUserId] = useState<string | null>(null);
+  const pathname = usePathname();
 
-  // useEffect(() => {
-  //   const fetchClasses = async () => {
-  //     setLoading(true);
-  //     setError("");
-  //     try {
-  //       const res = await fetch(`${BASE_URL}/classes`);
-  //       const data = await res.json();
-  //       let classArray = data;
-  //       if (data && typeof data === "object" && !Array.isArray(data)) {
-  //         if (Array.isArray(data.data)) classArray = data.data;
-  //         else if (Array.isArray(data.classes)) classArray = data.classes;
-  //         else classArray = [];
-  //       }
-  //       setClasses(classArray);
-  //       setFilteredClasses(classArray); // Initialize filtered classes
-  //     } catch {
-  //       setError("Failed to fetch classes");
-  //     } finally {
-  //       setLoading(false);
-  //     }
-  //   };
-  //   fetchClasses();
-  // }, []);
+const user = JSON.parse(Cookies.get("user") || "{}");
+const studentId = user?._id;
 
+
+  // Fetch all available classes to display in Group page
   useEffect(() => {
-    const fetchProfile = async () => {
-      const token = Cookies.get("accessToken");
-      if (!token) return;
+    const fetchClasses = async () => {
+      setLoading(true);
+      setError("");
 
-      const res = await fetch(`${BASE_URL}/users/profile`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      try {
+        const token = Cookies.get("accessToken");
 
-      const data = await res.json();
+        const res = await fetch(`${BASE_URL}/classes`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
 
-      if (data?._id) {
-        setUserId(data._id);
+        const data = await res.json();
+
+        const classArray = data.data || [];
+
+        setClasses(classArray);
+        setFilteredClasses(classArray);
+      } catch {
+        setError("Failed to fetch classes");
+      } finally {
+        setLoading(false);
       }
     };
 
-    fetchProfile();
+    fetchClasses();
   }, []);
-
-  // Fetch upcoming classes for the logged-in student after userId is available from profile
-  // useEffect(() => {
-  //   if (!userId) return;
-
-  //   const fetchClasses = async () => {
-  //     setLoading(true);
-  //     setError("");
-
-  //     try {
-  //       const token = Cookies.get("accessToken");
-
-  //       const res = await fetch(
-  //         `${BASE_URL}/classes/student/${userId}/classes/upcoming`,
-  //         {
-  //           headers: {
-  //             Authorization: `Bearer ${token}`,
-  //           },
-  //         },
-  //       );
-
-  //       const data = await res.json();
-
-  //       const classArray = data.classes || [];
-
-  //       setClasses(classArray);
-  //       setFilteredClasses(classArray);
-  //     } catch {
-  //       setError("Failed to fetch classes");
-  //     } finally {
-  //       setLoading(false);
-  //     }
-  //   };
-
-  //   fetchClasses();
-  // }, [userId]);
-
-// Fetch all available classes to display in Group page
-useEffect(() => {
-  const fetchClasses = async () => {
-    setLoading(true);
-    setError("");
-
-    try {
-      const token = Cookies.get("accessToken");
-
-      const res = await fetch(`${BASE_URL}/classes`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      const data = await res.json();
-
-      const classArray = data.data || [];
-
-      setClasses(classArray);
-      setFilteredClasses(classArray);
-    } catch {
-      setError("Failed to fetch classes");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  fetchClasses();
-}, []);
 
   // Fetch all enrolled classes for My Classes section
   useEffect(() => {
-  if (!userId) return;
+  if (!studentId) return;
 
   const fetchMyClasses = async () => {
     try {
       const token = Cookies.get("accessToken");
 
-      const res = await fetch(`${BASE_URL}/classes`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      const res = await fetch(
+        `${BASE_URL}/classes/student/${studentId}/classes`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
 
       const data = await res.json();
 
-      const enrolledClasses =
-        (data.data || []).filter((cls: any) =>
-          cls.students?.some((s: any) => s._id === userId)
-        );
-
-      setMyClasses(enrolledClasses);
+      setMyClasses(data.data || []);
     } catch (err) {
       console.log("Failed to fetch my classes", err);
     }
   };
 
   fetchMyClasses();
-}, [userId]);
-  // useEffect(() => {
-  //   if (!userId) return;
-
-  //   const fetchMyClasses = async () => {
-  //     try {
-  //       const token = Cookies.get("accessToken");
-
-  //       const res = await fetch(
-  //         `${BASE_URL}/classes/student/${userId}/classes`,
-  //         {
-  //           headers: {
-  //             Authorization: `Bearer ${token}`,
-  //           },
-  //         },
-  //       );
-
-  //       const data = await res.json();
-  //       setMyClasses(data.classes || []);
-  //     } catch (err) {
-  //       console.log("Failed to fetch my classes", err);
-  //     }
-  //   };
-
-  //   fetchMyClasses();
-  // }, [userId]);
+}, [studentId, pathname]);
 
   // Filter classes based on selected filter
   const filterClasses = (filter: string) => {
@@ -393,7 +290,7 @@ useEffect(() => {
                     <button
                       onClick={() =>
                         router.push(
-                          `/Homepage/Group/Details?classId=${item._id}`,
+                          `/Homepage/Group/Details?classId=${item._id}&studentId=${studentId}`,
                         )
                       }
                       className="bg-orange-500 text-white text-xs px-3 py-1 rounded-md hover:bg-orange-600"
@@ -450,7 +347,7 @@ useEffect(() => {
                 <button
                   onClick={() =>
                     router.push(
-                      `/Homepage/Group/Details?classId=${classItem._id}`,
+                      `/Homepage/Group/Details?classId=${classItem._id}&studentId=${studentId}`,
                     )
                   }
                   className="text-sm border px-3 py-1 rounded-md text-gray-700 hover:bg-gray-100"
