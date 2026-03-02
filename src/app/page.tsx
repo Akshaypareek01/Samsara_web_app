@@ -12,6 +12,7 @@ import { BASE_URL } from "@/lib/utils";
 
 export default function Home() {
   const [step, setStep] = useState("signin");
+  const [loginType, setLoginType] = useState<"student" | "coach">("student");
   const [verificationCode, setVerificationCode] = useState(Array(4).fill(""));
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
@@ -81,7 +82,21 @@ export default function Home() {
         return;
       }
       const data = await res.json();
+      const userRole = data?.user?.role;
+
       console.log("OTP verify response:", data);
+
+      // 🚨 CHECK IF LOGIN TAB MATCHES ROLE
+      if (
+        (loginType === "student" && userRole !== "user") ||
+        (loginType === "coach" && userRole !== "teacher")
+      ) {
+        toast.error(`This email is not registered as a ${loginType}`);
+        setStep("signin");
+        setLoading(false);
+        return;
+      }
+
       // Store access token in cookies
       if (data.tokens && data.tokens.access && data.tokens.access.token) {
         Cookies.set("accessToken", data.tokens.access.token, {
@@ -99,10 +114,16 @@ export default function Home() {
               : 7,
         });
       }
+
       setStep("success");
       toast.success("OTP verified successfully");
+
       setTimeout(() => {
-        router.push("/Homepage");
+        if (userRole === "user") {
+          router.push("/Homepage");
+        } else if (userRole === "teacher") {
+          router.push("/Homepage");
+        }
       }, 3000);
     } catch {
       setError("Network error. Please try again.");
@@ -148,7 +169,7 @@ export default function Home() {
           <div className="content-wrapper">
             <h1 className="welcome-heading">
               <span className="heading-top">Welcome to Your </span>
-           
+
               <span className="heading-bottom">Wellness Journey</span>
             </h1>
 
@@ -169,20 +190,43 @@ export default function Home() {
       >
         <div className="auth-content">
           {step !== "success" && (
-              <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
               <Image
-                  src="/images/SamsaraLogo.png"
-                  alt="Samsara Logo"
-                  width={200}
-                  height={200}
-                />
-              </div>
+                src="/images/SamsaraLogo.png"
+                alt="Samsara Logo"
+                width={200}
+                height={200}
+              />
+            </div>
           )}
 
           {step === "signin" && (
             <>
               {/* <h2 className="auth-title">Sign In to Samsara</h2> */}
-              <p className="auth-subtitle" style={{marginTop:"20px"}}>Continue your wellness journey</p>
+              <p className="auth-subtitle" style={{ marginTop: "20px" }}>
+                Continue your wellness journey
+              </p>
+
+              {/* CODW BLOCK */}
+              <div className="role-tabs">
+                <button
+                  type="button"
+                  onClick={() => setLoginType("student")}
+                  className={`role-tab ${loginType === "student" ? "role-tab-active" : ""
+                    }`}
+                >
+                  Student
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setLoginType("coach")}
+                  className={`role-tab ${loginType === "coach" ? "role-tab-active" : ""
+                    }`}
+                >
+                  Wellness Coach
+                </button>
+              </div>
 
               <div className="email-input">
                 <span className="email-icon">
@@ -251,7 +295,7 @@ export default function Home() {
               >
                 {loading ? "Verifying..." : "Verify Code"}
               </button>
-              
+
               <div className="text-center mt-4">
                 <button
                   onClick={() => setStep("signin")}

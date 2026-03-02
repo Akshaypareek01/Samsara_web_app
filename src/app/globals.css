@@ -1,4 +1,7 @@
-@import "tailwindcss";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+@import "tailwindcss"; 
 
 :root {
   --background: #ffffff;
@@ -586,4 +589,39 @@ body {
 /* Smooth transitions */
 * {
   transition: all 0.2s ease-in-out;
+}
+
+/* ===== STUDENT / COACH LOGIN TABS ===== */
+/* ===== LOGIN ROLE SWITCH TABS ===== */
+
+.role-tabs {
+  display: flex;
+  width: 100%;
+  background: #f3f4f6;
+  border-radius: 9999px;
+  padding: 4px;
+  margin-bottom: 20px;
+}
+
+.role-tab {
+  flex: 1;
+  border: none;
+  background: transparent;
+  padding: 10px 0;
+  border-radius: 9999px;
+  font-weight: 500;
+  color: #6b7280;
+  cursor: pointer;
+  transition: all 0.25s ease;
+}
+
+.role-tab-active {
+  background: #EB855F;
+  color: white;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+}
+
+.role-tab:hover {
+  border-color: #EB855F;
+  color: #EB855F;
 }
