@@ -77,7 +77,8 @@ interface EventDetails {
 }
 
 interface UserProfile {
-  _id: string;
+  _id?: string;
+  id?: string;
   name: string;
   email: string;
   role: string;
@@ -107,7 +108,12 @@ function EventsPageContent() {
   }>({ show: false, message: "", type: "success" });
 
   // Get event ID from URL or use default
-  const eventId = searchParams.get("eventId") || "686a3c6f4ddb095e0c716963";
+  const eventId = searchParams.get("eventId");
+
+  if (!eventId) {
+    return <div className="p-6">Event ID missing</div>;
+  }
+
 
   // Fetch user profile to get userId
   useEffect(() => {
@@ -131,7 +137,13 @@ function EventsPageContent() {
         }
 
         const data = await response.json();
-        setUserProfile(data);
+
+        const user = data.data || data;
+
+        setUserProfile({
+          ...user,
+          _id: user._id || user.id
+        });
       } catch (err) {
         setError(
           err instanceof Error ? err.message : "Failed to fetch user profile",
@@ -162,7 +174,7 @@ function EventsPageContent() {
         }
 
         const data = await response.json();
-        setEventDetails(data);
+        setEventDetails(data.data || data);
       } catch (err) {
         setError(err instanceof Error ? err.message : "An error occurred");
       } finally {
@@ -206,7 +218,7 @@ function EventsPageContent() {
 
       // Refresh event details to show updated enrollment
       setTimeout(() => {
-        window.location.reload();
+        window.location.href = "/Homepage/Events";
       }, 1500);
     } catch (err) {
       showToast(
@@ -289,11 +301,10 @@ function EventsPageContent() {
         {/* Toast Notification */}
         {toast.show && (
           <div
-            className={`fixed top-4 right-4 z-50 px-6 py-3 rounded-lg shadow-lg ${
-              toast.type === "success"
-                ? "bg-green-500 text-white"
-                : "bg-red-500 text-white"
-            }`}
+            className={`fixed top-4 right-4 z-50 px-6 py-3 rounded-lg shadow-lg ${toast.type === "success"
+              ? "bg-green-500 text-white"
+              : "bg-red-500 text-white"
+              }`}
           >
             {toast.message}
           </div>
@@ -348,11 +359,10 @@ function EventsPageContent() {
               </button>
             ) : (
               <button
-                className={`px-4 py-2 rounded-md text-sm shadow cursor-pointer ${
-                  registering
-                    ? "bg-gray-400 text-white cursor-not-allowed"
-                    : "bg-orange-500 hover:bg-orange-600 text-white"
-                }`}
+                className={`px-4 py-2 rounded-md text-sm shadow cursor-pointer ${registering
+                  ? "bg-gray-400 text-white cursor-not-allowed"
+                  : "bg-orange-500 hover:bg-orange-600 text-white"
+                  }`}
                 onClick={handleRegister}
                 disabled={registering}
               >

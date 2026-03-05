@@ -308,7 +308,7 @@ export default function EventsPage() {
                         className="bg-orange-500 text-white text-xs px-3 py-1 rounded-md hover:bg-orange-600 cursor-pointer"
                         onClick={() =>
                           router.push(
-                            `//Homepage/Events/${event._id}`,
+                            `/Homepage/Events/${event._id}`,
                           )
                         }
                       >
