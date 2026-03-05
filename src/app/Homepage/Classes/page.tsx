@@ -5,6 +5,7 @@ import { getCookie } from "cookies-next";
 import { BASE_URL } from "@/lib/utils";
 import { useRouter } from "next/navigation";
 import axios from "axios";
+import Image from "next/image";
 import { ClassCard, EventCard, StatsSection, TabNavigation } from "./components";
 
 
@@ -134,25 +135,25 @@ export default function MyClassesPage() {
   const [joiningEvent, setJoiningEvent] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'classes' | 'events'>('classes');
   const router = useRouter();
-// REAL DERIVED STATS (MongoDB based)
+  // REAL DERIVED STATS (MongoDB based)
 
-const attendedCount =
-  userProfile?.attendance?.filter(a => a.status === "attended").length || 0;
+  const attendedCount =
+    userProfile?.attendance?.filter(a => a.status === "attended").length || 0;
 
-// const totalHours =
-//   userProfile?.attendance?.reduce((acc, curr) => {
-//     const cls = allClasses.find(c => c._id === curr.classId);
-//     return acc + (cls?.duration || 0);
-//   }, 0) || 0;
-const totalHours =
-  userProfile?.attendance?.reduce((acc, curr) => {
-    const cls = allClasses.find(
-      c => String(c._id) === String(curr.classId)
-    );
-    return acc + (cls?.duration || 0);
-  }, 0) || 0;
+  // const totalHours =
+  //   userProfile?.attendance?.reduce((acc, curr) => {
+  //     const cls = allClasses.find(c => c._id === curr.classId);
+  //     return acc + (cls?.duration || 0);
+  //   }, 0) || 0;
+  const totalHours =
+    userProfile?.attendance?.reduce((acc, curr) => {
+      const cls = allClasses.find(
+        c => String(c._id) === String(curr.classId)
+      );
+      return acc + (cls?.duration || 0);
+    }, 0) || 0;
   //---------------------------------
-  
+
   // Get user's applied events
   const getUserAppliedEvents = async (userId: string) => {
     try {
@@ -250,11 +251,11 @@ const totalHours =
 
   const handleJoinClass = async (classId: string) => {
     setJoiningClass(classId);
-    
+
     try {
       // Find the class data to get meeting details
       const classData = allClasses.find(cls => cls._id === classId);
-      
+
       if (!classData) {
         alert("Class data not found");
         setJoiningClass(null);
@@ -278,12 +279,12 @@ const totalHours =
       };
 
       console.log("Data ===>", ZoomMeetingNumber);
-      
+
       const zoomMeetingNumberString = JSON.stringify(ZoomMeetingNumber);
-      
+
       // Navigate to webview page with meeting data
       router.push(`/Homepage/ZoomWebView?ZoomMeetingNumber=${encodeURIComponent(zoomMeetingNumberString)}`);
-      
+
     } catch (error) {
       console.error("Error joining class:", error);
       alert("Error opening class. Please try again.");
@@ -294,11 +295,11 @@ const totalHours =
 
   const handleJoinEvent = async (eventId: string) => {
     setJoiningEvent(eventId);
-    
+
     try {
       // Find the event data to get meeting details
       const eventData = userEvents.find(event => event._id === eventId);
-      
+
       if (!eventData) {
         alert("Event data not found");
         setJoiningEvent(null);
@@ -322,12 +323,12 @@ const totalHours =
       };
 
       console.log("Event Data ===>", ZoomMeetingNumber);
-      
+
       const zoomMeetingNumberString = JSON.stringify(ZoomMeetingNumber);
-      
+
       // Navigate to webview page with meeting data
       router.push(`/Homepage/ZoomWebView?ZoomMeetingNumber=${encodeURIComponent(zoomMeetingNumberString)}`);
-      
+
     } catch (error) {
       console.error("Error joining event:", error);
       alert("Error opening event. Please try again.");
@@ -412,12 +413,55 @@ const totalHours =
 
 
 
-<StatsSection 
-  classesCount={allClasses.length}
-  eventsCount={userEvents.length}
-  attendedCount={attendedCount}
-  totalHours={totalHours}
-/>
+        <StatsSection
+          classesCount={allClasses.length}
+          eventsCount={userEvents.length}
+          attendedCount={attendedCount}
+          totalHours={totalHours}
+        />
+
+
+        {/* Quick Access Cards */}
+        <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4 sm:gap-6">
+
+          {/* 1:1 Classes */}
+          <div
+            onClick={() => router.push("/Homepage/onetoone")}
+            className="cursor-pointer bg-white rounded-xl shadow-sm hover:shadow-md transition p-4 text-center"
+          >
+            <div className="relative w-full h-36 mb-4 rounded-lg overflow-hidden">
+              <Image
+                src="/images/room2.svg"
+                alt="1:1 Classes"
+                fill
+                className="object-cover"
+              />
+            </div>
+
+            <h3 className="font-semibold text-gray-800">1:1 Classes</h3>
+            <p className="text-sm text-gray-500">Private Sessions</p>
+          </div>
+
+          {/* Group Classes */}
+          <div
+            onClick={() => router.push("/Homepage/Group")}
+            className="cursor-pointer bg-white rounded-xl shadow-sm hover:shadow-md transition p-4 text-center"
+          >
+            <div className="relative w-full h-36 mb-4 rounded-lg overflow-hidden">
+              <Image
+                src="/images/room4.svg"
+                alt="Group Classes"
+                fill
+                className="object-cover"
+              />
+            </div>
+
+            <h3 className="font-semibold text-gray-800">Group Classes</h3>
+            <p className="text-sm text-gray-500">Community Learning</p>
+          </div>
+
+        </div>
+
         <div className="mt-8 sm:mt-12">
           {/* Tab Navigation */}
           <TabNavigation
@@ -430,19 +474,10 @@ const totalHours =
           {/* Classes Tab */}
           {activeTab === 'classes' && (
             <>
-              {/* {(allClasses?.length || 0) === 0 ? (
+              {(allClasses?.length || 0) === 0 ? (
                 <div className="text-center py-12 sm:py-16">
-                  <div className="text-gray-400 mb-4">
-                    <svg className="mx-auto h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-                    </svg>
-                  </div>
                   <p className="text-gray-500 text-sm sm:text-base">No classes booked yet</p>
-                </div> */}
-                {(allClasses?.length || 0) === 0 ? (
-  <div className="text-center py-12 sm:py-16">
-    <p className="text-gray-500 text-sm sm:text-base">No classes booked yet</p>
-  </div>
+                </div>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6">
                   {(allClasses || []).map((classItem, index) => (
@@ -462,35 +497,27 @@ const totalHours =
           {/* Events Tab */}
           {activeTab === 'events' && (
             <>
-              {/* {(userEvents?.length || 0) === 0 ? (
+
+              {(userEvents?.length || 0) === 0 ? (
                 <div className="text-center py-12 sm:py-16">
-                  <div className="text-gray-400 mb-4">
-                    <svg className="mx-auto h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                    </svg>
-                  </div>
                   <p className="text-gray-500 text-sm sm:text-base">No events booked yet</p>
-                </div> */}
-                {(userEvents?.length || 0) === 0 ? (
-  <div className="text-center py-12 sm:py-16">
-    <p className="text-gray-500 text-sm sm:text-base">No events booked yet</p>
-  </div>
-) :
-
-
-(
-                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6">
-                  {(userEvents || []).map((eventItem, index) => (
-                    <EventCard
-                      key={eventItem._id || index}
-                      eventItem={eventItem}
-                      joiningEvent={joiningEvent}
-                      onJoinEvent={handleJoinEvent}
-                      onViewDetails={handleViewEventDetails}
-                    />
-                  ))}
                 </div>
-              )}
+              ) :
+
+
+                (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6">
+                    {(userEvents || []).map((eventItem, index) => (
+                      <EventCard
+                        key={eventItem._id || index}
+                        eventItem={eventItem}
+                        joiningEvent={joiningEvent}
+                        onJoinEvent={handleJoinEvent}
+                        onViewDetails={handleViewEventDetails}
+                      />
+                    ))}
+                  </div>
+                )}
             </>
           )}
         </div>
