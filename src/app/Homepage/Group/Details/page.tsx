@@ -4,7 +4,7 @@ import Image from "next/image";
 import { useSearchParams, useRouter } from "next/navigation";
 import Cookies from "js-cookie";
 import { BASE_URL } from "@/lib/utils";
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 interface ClassType {
   _id?: string;
   image?: string;
@@ -27,13 +27,13 @@ interface ClassType {
   };
 }
 
-export default function ClassDetailsPage() {
+function ClassDetailsPageContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
 
   const classId = searchParams.get("classId");
 const user = JSON.parse(Cookies.get("user") || "{}");
-const studentId = user?.id;
+const studentId = user?._id || user?.id;
 
   const [classData, setClassData] = useState<ClassType | null>(null);
   const [isEnrolled, setIsEnrolled] = useState(false);
@@ -111,6 +111,11 @@ const handleRegister = async () => {
       setIsEnrolled(true);
     }
 
+    // refresh data so other pages show the enrolled class
+  setTimeout(() => {
+    router.push("/Homepage/Group");
+  }, 800);
+
   } catch (err) {
     console.log(err);
   } finally {
@@ -137,6 +142,10 @@ const handleRegister = async () => {
       )}`,
     );
   };
+
+  if (!classId) {
+  return <div className="p-6">Class ID missing</div>;
+}
 
   if (!classData) {
     return <div className="p-6 text-center">Loading class details...</div>;
@@ -243,4 +252,13 @@ return (
     )}
   </div>
 );
+}
+
+
+export default function ClassDetailsPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <ClassDetailsPageContent />
+    </Suspense>
+  );
 }

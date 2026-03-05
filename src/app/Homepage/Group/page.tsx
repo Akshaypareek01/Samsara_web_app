@@ -156,13 +156,6 @@ const studentId = user?._id;
       <div className="bg-white rounded-xl shadow-md p-6 w-full max-w-6xl space-y-8">
         {/* Banner Section */}
         <div className="relative w-full h-[220px] rounded-lg overflow-hidden">
-          {/* <Image
-            src="/images/peoples.svg"
-            alt="Upcoming Classes"
-            layout="fill"
-            objectFit="cover"
-            className="brightness-[0.6] rounded-lg"
-          /> */}
           <Image
             src="/images/peoples.svg"
             alt="Upcoming Classes"

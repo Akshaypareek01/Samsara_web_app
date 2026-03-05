@@ -110,9 +110,6 @@ function EventsPageContent() {
   // Get event ID from URL or use default
   const eventId = searchParams.get("eventId");
 
-  if (!eventId) {
-    return <div className="p-6">Event ID missing</div>;
-  }
 
 
   // Fetch user profile to get userId
@@ -154,6 +151,8 @@ function EventsPageContent() {
     fetchUserProfile();
   }, []);
 
+
+
   useEffect(() => {
     const fetchEventDetails = async () => {
       setLoading(true);
@@ -184,6 +183,10 @@ function EventsPageContent() {
 
     fetchEventDetails();
   }, [eventId]);
+
+  if (!eventId) {
+    return <div className="p-6">Event ID missing</div>;
+  }
 
   // Register for event
   const handleRegister = async () => {
@@ -313,11 +316,10 @@ function EventsPageContent() {
         {/* Banner Section */}
         <div className="relative w-full h-[220px] rounded-lg overflow-hidden">
           <Image
-            src={eventDetails.image || "/images/peoples.svg"}
+            src={eventDetails.image?.trim() ? eventDetails.image : "/images/peoples.svg"}
             alt={eventDetails.eventName}
-            layout="fill"
-            objectFit="cover"
-            className="brightness-[0.6] rounded-lg"
+            fill
+            className="brightness-[0.6] rounded-lg object-cover"
           />
         </div>
 
@@ -328,12 +330,13 @@ function EventsPageContent() {
             <div className="relative w-[60px] h-[60px] rounded-full shadow-md ring-2 ring-white overflow-hidden">
               <Image
                 src={
-                  eventDetails.teacher?.image?.path ||
-                  "https://images.unsplash.com/photo-1607746882042-944635dfe10e?auto=format&fit=crop&w=80&q=80"
+                  eventDetails.teacher?.image?.path?.trim()
+                    ? eventDetails.teacher.image.path
+                    : "https://images.unsplash.com/photo-1607746882042-944635dfe10e"
                 }
                 alt={eventDetails.teacher?.name || "Host"}
-                layout="fill"
-                objectFit="cover"
+                fill
+                className="object-cover"
               />
             </div>
 

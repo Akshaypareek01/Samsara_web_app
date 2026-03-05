@@ -43,32 +43,14 @@ export default function EventsPage() {
 
   // Fetch user profile to get user id
   useEffect(() => {
-    const fetchUserProfile = async () => {
-      const token = Cookies.get("accessToken");
-      if (!token) return;
-      try {
-        const res = await fetch(`${BASE_URL}/users/profile`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (!res.ok) return;
-        // const data = await res.json();
-        // if (data && data.id) setUserId(data.id);
+  const user = JSON.parse(Cookies.get("user") || "{}");
+  const id = user?._id || user?.id;
 
-        // const profileRes = await res.json();
-        // const profileData = profileRes.data;
+  if (id) {
+    setUserId(id);
+  }
+}, []);
 
-        // if (profileData && profileData._id) {
-        //   setUserId(profileData._id);
-        // }
-        const profileData = await res.json();
-
-        if (profileData && profileData._id) {
-          setUserId(profileData._id);
-        }
-      } catch {}
-    };
-    fetchUserProfile();
-  }, []);
 
   // Fetch user events when userId is available
   useEffect(() => {
@@ -90,19 +72,18 @@ export default function EventsPage() {
           return;
         }
         const data = await res.json();
-        // let eventsArray = data;
-        // if (data && typeof data === "object" && !Array.isArray(data)) {
-        //   if (Array.isArray(data.events)) {
-        //     eventsArray = data.events;
-        //   } else if (Array.isArray(data.data)) {
-        //     eventsArray = data.data;
-        //   } else {
-        //     eventsArray = [];
-        //   }
-        // }
-        // setUserEvents(eventsArray);
-        const userEventsData = data.events || [];
-        setUserEvents(userEventsData);
+
+        let eventsArray: Event[] = [];
+
+        if (Array.isArray(data)) {
+          eventsArray = data;
+        } else if (Array.isArray(data.events)) {
+          eventsArray = data.events;
+        } else if (Array.isArray(data.data)) {
+          eventsArray = data.data;
+        }
+
+        setUserEvents(eventsArray);
         console.log("userEvents API response:", data);
       } catch {
         setUserEventsError("Network error");
@@ -213,11 +194,10 @@ export default function EventsPage() {
           {filters.map((filter, index) => (
             <button
               key={index}
-              className={`px-4 py-1 rounded-full text-sm font-medium transition-colors ${
-                selectedFilter === filter
-                  ? "bg-orange-500 text-white"
-                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-              }`}
+              className={`px-4 py-1 rounded-full text-sm font-medium transition-colors ${selectedFilter === filter
+                ? "bg-orange-500 text-white"
+                : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                }`}
               onClick={() => filterEvents(filter)}
             >
               {filter}
@@ -260,7 +240,7 @@ export default function EventsPage() {
                   {/* Card Image */}
                   <div className="relative h-[150px] w-full">
                     <Image
-                      src={event.image}
+                      src={event.image || "/images/class1.svg"}
                       alt={event.eventName}
                       layout="fill"
                       objectFit="cover"
@@ -356,7 +336,7 @@ export default function EventsPage() {
                   {/* Card Image */}
                   <div className="relative h-[150px] w-full">
                     <Image
-                      src={event.image}
+                      src={event.image || "/images/class1.svg"}
                       alt={event.eventName}
                       layout="fill"
                       objectFit="cover"
@@ -445,7 +425,7 @@ export default function EventsPage() {
                 {/* Left Side */}
                 <div className="flex gap-3 items-center">
                   <Image
-                    src={event.image}
+                    src={event.image || "/images/class1.svg"}
                     alt={event.eventName}
                     width={48}
                     height={48}

@@ -135,16 +135,12 @@ export default function MyClassesPage() {
   const [joiningEvent, setJoiningEvent] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'classes' | 'events'>('classes');
   const router = useRouter();
-  // REAL DERIVED STATS (MongoDB based)
+
 
   const attendedCount =
     userProfile?.attendance?.filter(a => a.status === "attended").length || 0;
 
-  // const totalHours =
-  //   userProfile?.attendance?.reduce((acc, curr) => {
-  //     const cls = allClasses.find(c => c._id === curr.classId);
-  //     return acc + (cls?.duration || 0);
-  //   }, 0) || 0;
+
   const totalHours =
     userProfile?.attendance?.reduce((acc, curr) => {
       const cls = allClasses.find(
@@ -197,25 +193,10 @@ export default function MyClassesPage() {
         const profileData = await profileResponse.json();
         setUserProfile(profileData);
 
+
         // Fetch upcoming classes
-        // const upcomingResponse = await fetch(
-        //   `${BASE_URL}/classes/student/${profileData.id}/classes/upcoming`,
-        //   {
-        //     headers: {
-        //       Authorization: `Bearer ${accessToken}`,
-        //       "Content-Type": "application/json",
-        //     },
-        //   }
-        // );
-
-        // if (upcomingResponse.ok) {
-        //   const upcomingData = await upcomingResponse.json();
-        //   setUpcomingClasses(upcomingData);
-        // }
-
-        // Fetch all classes
         const allClassesResponse = await fetch(
-          `${BASE_URL}/classes/student/${profileData.id}/classes/upcoming`,
+          `${BASE_URL}/classes/student/${profileData._id || profileData.id}/classes/upcoming`,
           {
             headers: {
               Authorization: `Bearer ${accessToken}`,
@@ -345,31 +326,6 @@ export default function MyClassesPage() {
     router.push(`/Homepage/Events/${eventId}`);
   };
 
-
-  // const classItems = [
-  //   {
-  //     image: "/images/room4.svg",
-  //     title: "Upcoming Classes",
-  //     subtitle: `${upcomingClasses?.length || 0} Classes`,
-  //   },
-  //   {
-  //     image: "/images/room3.svg",
-  //     title: "Past Classes",
-  //     subtitle: `${
-  //       (allClasses?.length || 0) - (upcomingClasses?.length || 0)
-  //     } Classes`,
-  //   },
-  //   {
-  //     image: "/images/room2.svg",
-  //     title: "Favorites",
-  //     subtitle: `${userProfile?.favoriteClasses?.length || 0} Items`,
-  //   },
-  //   {
-  //     image: "/images/room1.svg",
-  //     title: "Class Wraps",
-  //     subtitle: `${userProfile?.classFeedback?.length || 0} Materials`,
-  //   },
-  // ];
 
   if (loading) {
     return (
