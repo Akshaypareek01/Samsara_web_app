@@ -123,26 +123,6 @@ const handleRegister = async () => {
   }
 };
 
-  // Join class
-  const handleJoin = () => {
-    if (!classData?.meeting_number) {
-      alert("Class not started yet");
-      return;
-    }
-
-    const zoomData = {
-      number: classData.meeting_number,
-      pass: classData.password || "",
-      eventId: classData._id,
-    };
-
-    router.push(
-      `/Homepage/ZoomWebView?ZoomMeetingNumber=${encodeURIComponent(
-        JSON.stringify(zoomData),
-      )}`,
-    );
-  };
-
   if (!classId) {
   return <div className="p-6">Class ID missing</div>;
 }
@@ -232,8 +212,7 @@ return (
       </div>
     </div>
 
-    {/* Register / Join Button */}
-
+    {/* Register vs Already Registered */}
     {!isEnrolled ? (
       <button
         onClick={handleRegister}
@@ -243,12 +222,21 @@ return (
         {joining ? "Registering..." : "Register"}
       </button>
     ) : (
-      <button
-        onClick={handleJoin}
-        className="w-full bg-green-500 text-white py-3 rounded-md"
-      >
-        Join Class
-      </button>
+      <div className="bg-gray-50 border border-gray-200 rounded-xl p-5">
+        <h3 className="text-md font-semibold text-gray-800 mb-2">
+          You&apos;re already registered
+        </h3>
+        <p className="text-sm text-gray-600 mb-4">
+          This class is in your list. Registered classes are available in{" "}
+          <strong>My Classes</strong> — join the class from there when it starts.
+        </p>
+        <button
+          onClick={() => router.push("/Homepage/Classes")}
+          className="w-full bg-orange-500 text-white py-3 rounded-md hover:bg-orange-600 transition"
+        >
+          Go to My Classes
+        </button>
+      </div>
     )}
   </div>
 );

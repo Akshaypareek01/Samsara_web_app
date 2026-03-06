@@ -452,36 +452,48 @@ function EventDetailsContent({ eventId }: { eventId: string }) {
             {/* Event Action Button */}
             <div className="sticky top-4">
               {!isEnrolled ? (
-                <button
-                  onClick={() =>
-                    router.push(
-                      `/Homepage/Events/book?eventId=${eventData._id}`,
-                    )
-                  }
-                  className="w-full bg-orange-500 text-white py-4 px-6 rounded-xl text-lg font-semibold"
-                >
-                  Register
-                </button>
-              ) : eventData.status ? (
-                <button
-                  onClick={handleJoinEvent}
-                  disabled={joiningEvent}
-                  className="w-full bg-green-500 text-white py-4 px-6 rounded-xl text-lg font-semibold"
-                >
-                  {joiningEvent ? "Joining..." : "Join Event"}
-                </button>
+                <>
+                  <button
+                    onClick={() =>
+                      router.push(
+                        `/Homepage/Events/book?eventId=${eventData._id}`,
+                      )
+                    }
+                    className="w-full bg-orange-500 text-white py-4 px-6 rounded-xl text-lg font-semibold"
+                  >
+                    Register
+                  </button>
+                  <p className="text-sm text-gray-500 text-center mt-2">
+                    {eventData.students.length} participants enrolled
+                  </p>
+                </>
               ) : (
-                <button
-                  disabled
-                  className="w-full bg-gray-300 text-gray-700 py-4 px-6 rounded-xl text-lg font-semibold"
-                >
-                  Waiting for Host to Start
-                </button>
+                <div className="bg-gray-50 border border-gray-200 rounded-xl p-5">
+                  <h3 className="text-md font-semibold text-gray-800 mb-2">
+                    You&apos;re already registered
+                  </h3>
+                  <p className="text-sm text-gray-600 mb-4">
+                    This event is in your list. Registered events are available
+                    in <strong>My Events</strong> — join the event from there
+                    when it starts.
+                  </p>
+                  {eventData.status && eventData.meeting_number && (
+                    <button
+                      onClick={handleJoinEvent}
+                      disabled={joiningEvent}
+                      className="w-full bg-green-500 text-white py-3 rounded-xl font-semibold hover:bg-green-600 transition disabled:opacity-50 mb-3"
+                    >
+                      {joiningEvent ? "Joining..." : "Join Event"}
+                    </button>
+                  )}
+                  <button
+                    onClick={() => router.push("/Homepage/Events")}
+                    className="w-full bg-orange-500 text-white py-3 rounded-xl font-semibold hover:bg-orange-600 transition"
+                  >
+                    Go to My Events
+                  </button>
+                </div>
               )}
-
-              <p className="text-sm text-gray-500 text-center mt-2">
-                {eventData.students.length} participants enrolled
-              </p>
             </div>
           </div>
         </div>

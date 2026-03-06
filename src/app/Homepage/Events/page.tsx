@@ -25,6 +25,8 @@ type Event = {
   };
   students?: { name: string }[];
   status?: boolean;
+  meeting_number?: string;
+  password?: string;
 };
 
 export default function EventsPage() {
@@ -40,16 +42,32 @@ export default function EventsPage() {
   const [loadingUserEvents, setLoadingUserEvents] = useState(true);
   const [userEventsError, setUserEventsError] = useState("");
   const [userId, setUserId] = useState<string | null>(null);
+  const [joiningEvent, setJoiningEvent] = useState<string | null>(null);
+  const [userProfile, setUserProfile] = useState<{ name?: string; email?: string } | null>(null);
 
-  // Fetch user profile to get user id
+  // Fetch user profile to get user id and name/email for join
   useEffect(() => {
-  const user = JSON.parse(Cookies.get("user") || "{}");
-  const id = user?._id || user?.id;
+    const user = JSON.parse(Cookies.get("user") || "{}");
+    const id = user?._id || user?.id;
+    if (id) setUserId(id);
+    if (user?.name || user?.email) {
+      setUserProfile({ name: user.name, email: user.email });
+    }
+  }, []);
 
-  if (id) {
-    setUserId(id);
-  }
-}, []);
+  // Fetch full profile for name/email if not in cookie
+  useEffect(() => {
+    if (!userId || userProfile?.name) return;
+    const token = Cookies.get("accessToken");
+    if (!token) return;
+    fetch(`${BASE_URL}/users/profile`, { headers: { Authorization: `Bearer ${token}` } })
+      .then((res) => res.ok && res.json())
+      .then((data) => {
+        const u = data?.data || data;
+        if (u?.name || u?.email) setUserProfile({ name: u.name, email: u.email });
+      })
+      .catch(() => {});
+  }, [userId, userProfile?.name]);
 
 
   // Fetch user events when userId is available
@@ -121,6 +139,26 @@ export default function EventsPage() {
     };
     fetchEvents();
   }, []);
+
+  const handleJoinEvent = (eventId: string) => {
+    const event = userEvents.find((e) => e._id === eventId);
+    if (!event?.meeting_number) {
+      alert("Event not started yet – no meeting link available");
+      return;
+    }
+    setJoiningEvent(eventId);
+    const zoomData = {
+      number: event.meeting_number,
+      pass: event.password || "",
+      userName: userProfile?.name || "User",
+      email: userProfile?.email || "",
+      eventId: event._id,
+    };
+    router.push(
+      `/Homepage/ZoomWebView?ZoomMeetingNumber=${encodeURIComponent(JSON.stringify(zoomData))}`,
+    );
+    setJoiningEvent(null);
+  };
 
   // Filter events based on selected filter
   const filterEvents = (filter: string) => {
@@ -288,7 +326,7 @@ export default function EventsPage() {
                         className="bg-orange-500 text-white text-xs px-3 py-1 rounded-md hover:bg-orange-600 cursor-pointer"
                         onClick={() =>
                           router.push(
-                            `/Homepage/Events/${event._id}`,
+                            `/Homepage/Events/book?eventId=${event._id}`,
                           )
                         }
                       >
@@ -384,7 +422,7 @@ export default function EventsPage() {
                         className="bg-orange-500 text-white text-xs px-3 py-1 rounded-md hover:bg-orange-600 cursor-pointer"
                         onClick={() =>
                           router.push(
-                            `/Homepage/Events/${event._id}`,
+                            `/Homepage/Events/book?eventId=${event._id}`,
                           )
                         }
                       >
@@ -443,10 +481,24 @@ export default function EventsPage() {
                     </div>
                   </div>
                 </div>
-                {/* Right Side Button */}
-                <button className="text-sm border px-3 py-1 rounded-md text-gray-700 hover:bg-gray-100">
-                  View Details →
-                </button>
+                {/* Right Side: View Details + Join (for registered online events) */}
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => router.push(`/Homepage/Events/${event._id}`)}
+                    className="text-sm border px-3 py-1 rounded-md text-gray-700 hover:bg-gray-100"
+                  >
+                    View Details →
+                  </button>
+                  {event.eventmode === "online" && event.meeting_number && (
+                    <button
+                      onClick={() => handleJoinEvent(event._id)}
+                      disabled={joiningEvent === event._id}
+                      className="text-sm bg-orange-500 text-white px-3 py-1 rounded-md hover:bg-orange-600 disabled:opacity-50"
+                    >
+                      {joiningEvent === event._id ? "Joining..." : "Join"}
+                    </button>
+                  )}
+                </div>
               </div>
             ))
           )}
