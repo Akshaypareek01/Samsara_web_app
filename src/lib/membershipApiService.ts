@@ -31,6 +31,12 @@ const makeRequest = async <T = unknown>(
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({ message: 'Request failed' }));
+
+    // Treat "no active membership" as a normal state
+  if (response.status === 404 && error?.message === 'No active membership found') {
+   return null as T;
+  }
+
     throw new Error(error.message || `HTTP error! status: ${response.status}`);
   }
 
@@ -229,7 +235,7 @@ class MembershipApiService {
     } catch (error) {
       console.error('Error getting active membership:', error);
       const errorMessage = error instanceof Error ? error.message : '';
-      if (errorMessage.includes('404') || errorMessage.includes('Not Found')) {
+      if (errorMessage.includes('404') || errorMessage.includes('Not Found') || errorMessage.includes('NO_ACTIVE_MEMBERSHIP')) {
         return null; // No active membership
       }
       throw error;
