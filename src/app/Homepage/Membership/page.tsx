@@ -52,9 +52,9 @@ export default function MembershipPage() {
         MembershipApiService.getActiveMembership().catch(() => null),
       ]);
 
-      // Filter out trial plans if user has had one before
+      // Filter out trial plans if user has had one before, and strip any null/invalid entries
       const filteredPlans = filterTrialPlansForUser(plansData, hasHadTrial);
-      setPlans(filteredPlans);
+      setPlans(filteredPlans.filter((p): p is Plan => p != null && (p._id != null || p.id != null)));
       setActiveMembership(membershipData);
 
       console.log('✅ Plans loaded:', plansData.length, 'Filtered plans:', filteredPlans.length);
@@ -75,7 +75,8 @@ export default function MembershipPage() {
     }
 
     const planId = plan._id || plan.id;
-    if (activeMembership && activeMembership.planId._id === planId) {
+    const activePlanId = activeMembership?.planId?._id ?? (activeMembership?.planId as { id?: string } | undefined)?.id;
+    if (activePlanId && activePlanId === planId) {
       toast.error('You already have an active membership for this plan');
       return;
     }
@@ -85,7 +86,8 @@ export default function MembershipPage() {
 
   const renderPlanCard = (plan: Plan) => {
     const planId = plan._id || plan.id;
-    const isActive = !!(activeMembership && activeMembership.planId._id === planId);
+    const activePlanId = activeMembership?.planId?._id ?? (activeMembership?.planId as { id?: string } | undefined)?.id;
+    const isActive = !!(activePlanId && activePlanId === planId);
     const isTrial = isTrialPlan(plan);
 
     return (
@@ -228,7 +230,7 @@ export default function MembershipPage() {
           <h2 className="text-2xl font-bold text-gray-800 mb-6">Available Plans</h2>
           {plans.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {plans.map(renderPlanCard)}
+              {plans.filter((p): p is Plan => p != null && (p._id != null || p.id != null)).map(renderPlanCard)}
             </div>
           ) : (
             <div className="bg-white rounded-xl p-8 text-center">
