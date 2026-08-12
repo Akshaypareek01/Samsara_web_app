@@ -1,7 +1,9 @@
 "use client";
 
 import Image from "next/image";
-import { Calendar, User, Clock } from "lucide-react";
+import { Calendar, Clock } from "lucide-react";
+import LetterAvatar from "@/components/LetterAvatar";
+import { formatDisplayDate } from "@/lib/formatDisplayDate";
 
 interface EventData {
   _id: string;
@@ -95,7 +97,11 @@ export default function EventCard({
           </p>
           
           <div className="flex items-center space-x-2 text-xs sm:text-sm text-gray-500">
-            <User className="w-3 h-3 sm:w-4 sm:h-4 text-gray-400 flex-shrink-0" />
+            <LetterAvatar
+              name={eventItem.teacher.name}
+              src={eventItem.teacher.profileImage}
+              size={20}
+            />
             <span className="truncate">{eventItem.teacher.name}</span>
             <span className="text-gray-300">•</span>
             <span className="truncate">{eventItem.teacher.teacherCategory}</span>
@@ -113,7 +119,7 @@ export default function EventCard({
           
           <div className="flex items-center space-x-2">
             <Calendar className="w-3 h-3 sm:w-4 sm:h-4 text-orange-500 flex-shrink-0" />
-            <span className="truncate">{new Date(eventItem.startDate).toLocaleDateString()}</span>
+            <span className="truncate">{formatDisplayDate(eventItem.startDate)}</span>
             <span className="text-gray-300">•</span>
             <span className="truncate">{eventItem.location}</span>
           </div>
@@ -134,21 +140,30 @@ export default function EventCard({
             {eventItem.students.length} enrolled
           </span>
           
-          <div className="flex space-x-2">
-            <button 
+          <div className="flex space-x-2 items-center">
+            <button
+              type="button"
               onClick={() => onViewDetails(eventItem._id)}
               className="text-xs sm:text-sm text-orange-500 font-medium hover:underline focus:outline-none focus:underline"
             >
               Details
             </button>
-            {eventItem.status && (
-              <button 
+            {eventItem.status && eventItem.meeting_number ? (
+              <button
+                type="button"
                 onClick={() => onJoinEvent(eventItem._id)}
                 disabled={joiningEvent === eventItem._id}
                 className="bg-orange-500 text-white px-3 py-1.5 sm:px-4 sm:py-2 rounded-md text-xs sm:text-sm hover:bg-orange-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2"
               >
                 {joiningEvent === eventItem._id ? "Joining..." : "Join"}
               </button>
+            ) : (
+              <span
+                className="text-xs text-gray-400 px-2 py-1.5"
+                title="Meeting has not started yet"
+              >
+                Not started
+              </span>
             )}
           </div>
         </div>

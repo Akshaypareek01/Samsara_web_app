@@ -5,7 +5,12 @@ import { Calendar, User, Clock, ArrowLeft, Users, MapPin } from "lucide-react";
 import { useEffect, useState } from "react";
 import { getCookie } from "cookies-next";
 import { BASE_URL } from "@/lib/utils";
+import { getUserId } from "@/lib/userId";
+import { canJoinAsHost } from "@/lib/isOwnHost";
 import { useRouter } from "next/navigation";
+import EventHostActions from "../components/EventHostActions";
+import LetterAvatar from "@/components/LetterAvatar";
+import { formatDisplayDate } from "@/lib/formatDisplayDate";
 
 interface EventData {
   _id: string;
@@ -27,7 +32,8 @@ interface EventData {
     email: string;
     teacherCategory: string;
     expertise: string[];
-    profileImage: string;
+    profileImage?: string;
+    logo?: string;
     AboutMe: string;
     gender: string;
     age: string;
@@ -122,13 +128,15 @@ function EventDetailsContent({ eventId }: { eventId: string }) {
 
   //check enrollment
   useEffect(() => {
-    if (!eventData?._id || !userProfile?._id) return;
+    const eventIdValue = eventData?._id;
+    const userId = getUserId(userProfile);
+    if (!eventIdValue || !userId) return;
 
     const check = async () => {
       const token = getCookie("accessToken");
 
       const res = await fetch(
-        `${BASE_URL}/events/enrollment/${eventData._id}/${userProfile._id}`,
+        `${BASE_URL}/events/enrollment/${eventIdValue}/${userId}`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -173,35 +181,36 @@ function EventDetailsContent({ eventId }: { eventId: string }) {
     fetchUserProfile();
   }, []);
 
-  const handleJoinEvent = async () => {
+  const isHost = canJoinAsHost(userProfile, eventData?.teacher);
+
+  /**
+   * Opens Zoom for this event; hosts join with role:1 (forceHost).
+   * Students always get role 0 (attendee).
+   */
+  const handleJoinEvent = async (asHost = false) => {
     if (!eventData) return;
 
     setJoiningEvent(true);
 
     try {
-      // Check if meeting number exists
       if (!eventData.meeting_number) {
         alert("Event Not Started - No meeting number available");
         setJoiningEvent(false);
         return;
       }
 
-      // Create Zoom meeting URL
+      const hostOk = canJoinAsHost(userProfile, eventData.teacher);
       const ZoomMeetingNumber = {
         number: eventData.meeting_number,
         pass: eventData.password || "",
         userName: userProfile?.name || "User",
         email: userProfile?.email || "",
         eventId: eventData._id || "",
+        role: hostOk && asHost ? 1 : 0,
       };
 
-      console.log("Event Data ===>", ZoomMeetingNumber);
-
-      const zoomMeetingNumberString = JSON.stringify(ZoomMeetingNumber);
-
-      // Navigate to webview page with meeting data
       router.push(
-        `/Homepage/ZoomWebView?ZoomMeetingNumber=${encodeURIComponent(zoomMeetingNumberString)}`,
+        `/Homepage/ZoomWebView?ZoomMeetingNumber=${encodeURIComponent(JSON.stringify(ZoomMeetingNumber))}`,
       );
     } catch (error) {
       console.error("Error joining event:", error);
@@ -211,11 +220,17 @@ function EventDetailsContent({ eventId }: { eventId: string }) {
     }
   };
 
+  const teacherAvatar =
+    eventData?.teacher?.profileImage || eventData?.teacher?.logo;
+
   if (loading) {
     return (
-      <div className="p-6 md:p-12 bg-white">
+      <div className="px-4 sm:px-6 py-6 max-w-6xl mx-auto">
         <div className="flex items-center justify-center h-64">
-          <div className="text-lg">Loading event details...</div>
+          <div
+            className="w-10 h-10 rounded-full border-2 border-[#ed662e] border-t-transparent animate-spin"
+            aria-label="Loading"
+          />
         </div>
       </div>
     );
@@ -223,7 +238,7 @@ function EventDetailsContent({ eventId }: { eventId: string }) {
 
   if (error || !eventData) {
     return (
-      <div className="p-6 md:p-12 bg-white">
+      <div className="px-4 sm:px-6 py-6 max-w-6xl mx-auto">
         <div className="flex items-center justify-center h-64">
           <div className="text-lg text-red-500">
             Error: {error || "Event not found"}
@@ -234,7 +249,7 @@ function EventDetailsContent({ eventId }: { eventId: string }) {
   }
 
   return (
-    <div className="p-6 md:p-12 bg-white">
+    <div className="px-4 sm:px-6 py-6 max-w-6xl mx-auto">
       {/* Header */}
       <div className="flex items-center space-x-4 mb-8">
         <button
@@ -287,15 +302,13 @@ function EventDetailsContent({ eventId }: { eventId: string }) {
             </div>
 
             {/* Teacher Section */}
-            <div className="bg-gray-50 rounded-xl p-6">
+            <div className="bg-white rounded-xl border border-orange-100/80 shadow-sm p-6">
               <h3 className="text-xl font-semibold mb-4">Instructor</h3>
               <div className="flex items-start space-x-4">
-                <Image
-                  src={eventData.teacher.profileImage}
-                  alt={eventData.teacher.name}
-                  width={80}
-                  height={80}
-                  className="rounded-full object-cover"
+                <LetterAvatar
+                  name={eventData.teacher.name}
+                  src={teacherAvatar}
+                  size={80}
                 />
                 <div className="flex-1">
                   <h4 className="text-xl font-semibold text-gray-900">
@@ -369,7 +382,7 @@ function EventDetailsContent({ eventId }: { eventId: string }) {
                   <div>
                     <p className="font-medium">Date</p>
                     <p className="text-gray-600">
-                      {new Date(eventData.startDate).toLocaleDateString()}
+                      {formatDisplayDate(eventData.startDate)}
                     </p>
                   </div>
                 </div>
@@ -433,68 +446,20 @@ function EventDetailsContent({ eventId }: { eventId: string }) {
               </div>
             </div>
 
-            {/* Join Button */}
-            {/* {eventData.status && (
-              <div className="sticky top-4">
-                <button
-                  onClick={handleJoinEvent}
-                  disabled={joiningEvent}
-                  className="w-full bg-orange-500 text-white py-4 px-6 rounded-xl text-lg font-semibold hover:bg-orange-600 transition disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {joiningEvent ? "Joining..." : "Join Event"}
-                </button>
-                <p className="text-sm text-gray-500 text-center mt-2">
-                  {eventData.students.length} participants enrolled
-                </p>
-              </div>
-            )} */}
-
-            {/* Event Action Button */}
-            <div className="sticky top-4">
-              {!isEnrolled ? (
-                <>
-                  <button
-                    onClick={() =>
-                      router.push(
-                        `/Homepage/Events/book?eventId=${eventData._id}`,
-                      )
-                    }
-                    className="w-full bg-orange-500 text-white py-4 px-6 rounded-xl text-lg font-semibold"
-                  >
-                    Register
-                  </button>
-                  <p className="text-sm text-gray-500 text-center mt-2">
-                    {eventData.students.length} participants enrolled
-                  </p>
-                </>
-              ) : (
-                <div className="bg-gray-50 border border-gray-200 rounded-xl p-5">
-                  <h3 className="text-md font-semibold text-gray-800 mb-2">
-                    You&apos;re already registered
-                  </h3>
-                  <p className="text-sm text-gray-600 mb-4">
-                    This event is in your list. Registered events are available
-                    in <strong>My Events</strong> — join the event from there
-                    when it starts.
-                  </p>
-                  {eventData.status && eventData.meeting_number && (
-                    <button
-                      onClick={handleJoinEvent}
-                      disabled={joiningEvent}
-                      className="w-full bg-green-500 text-white py-3 rounded-xl font-semibold hover:bg-green-600 transition disabled:opacity-50 mb-3"
-                    >
-                      {joiningEvent ? "Joining..." : "Join Event"}
-                    </button>
-                  )}
-                  <button
-                    onClick={() => router.push("/Homepage/Events")}
-                    className="w-full bg-orange-500 text-white py-3 rounded-xl font-semibold hover:bg-orange-600 transition"
-                  >
-                    Go to My Events
-                  </button>
-                </div>
-              )}
-            </div>
+            <EventHostActions
+              isHost={isHost}
+              isEnrolled={isEnrolled}
+              meetingNumber={eventData.meeting_number}
+              joining={joiningEvent}
+              enrolledCount={eventData.students.length}
+              eventStatus={eventData.status}
+              onJoinAsHost={() => handleJoinEvent(true)}
+              onRegister={() =>
+                router.push(`/Homepage/Events/book?eventId=${eventData._id}`)
+              }
+              onJoinAsStudent={() => handleJoinEvent(false)}
+              onBack={() => router.push("/Homepage/Events")}
+            />
           </div>
         </div>
       </div>

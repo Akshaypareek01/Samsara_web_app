@@ -1,5 +1,6 @@
-// Razorpay Configuration
-export const RAZORPAY_KEY_ID = 'rzp_live_RFX8UK05mWECwo';
+// Razorpay Configuration — set NEXT_PUBLIC_RAZORPAY_KEY_ID in env (never hardcode live keys)
+export const RAZORPAY_KEY_ID =
+  process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID?.trim() || '';
 
 // Razorpay instance type
 interface RazorpayInstance {

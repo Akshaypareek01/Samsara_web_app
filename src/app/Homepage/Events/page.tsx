@@ -1,39 +1,38 @@
 "use client";
 
 import Image from "next/image";
-import { Clock, DollarSign, Users } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Cookies from "js-cookie";
 import { BASE_URL } from "@/lib/utils";
+import { isOwnResource } from "@/lib/isOwnHost";
+import { DAY_CHIPS, matchesDayChip, matchesSearch } from "@/lib/listingFilters";
+import EmptyState from "@/components/EmptyState";
+import ListingFilterBar from "@/components/ListingFilterBar";
+import SectionHeader from "@/components/SectionHeader";
+import EventListingCard, { ListingEvent } from "./components/EventListingCard";
+import { formatDisplayDate } from "@/lib/formatDisplayDate";
 
-type Event = {
-  _id: string;
-  eventName: string;
+type Event = ListingEvent & {
   details: string;
-  availableseats: string;
   eventmode: string;
-  image: string;
   level: string;
   location: string;
-  startDate: string;
-  startTime: string;
-  type: string;
-  teacher?: {
-    name: string;
-    profileImage?: string;
-  };
   students?: { name: string }[];
-  status?: boolean;
   meeting_number?: string;
   password?: string;
 };
 
+/**
+ * Events listing — online/offline grids, filters, and My Events.
+ */
 export default function EventsPage() {
   const router = useRouter();
   const [events, setEvents] = useState<Event[]>([]);
-  const [filteredEvents, setFilteredEvents] = useState<Event[]>([]);
   const [selectedFilter, setSelectedFilter] = useState("All");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [levelFilter, setLevelFilter] = useState("All");
+  const [typeFilter, setTypeFilter] = useState("All");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [seeAllOnline, setSeeAllOnline] = useState(false);
@@ -42,12 +41,21 @@ export default function EventsPage() {
   const [loadingUserEvents, setLoadingUserEvents] = useState(true);
   const [userEventsError, setUserEventsError] = useState("");
   const [userId, setUserId] = useState<string | null>(null);
+  const [cookieUser, setCookieUser] = useState<{
+    _id?: string;
+    id?: string;
+    name?: string;
+    email?: string;
+  } | null>(null);
   const [joiningEvent, setJoiningEvent] = useState<string | null>(null);
-  const [userProfile, setUserProfile] = useState<{ name?: string; email?: string } | null>(null);
+  const [userProfile, setUserProfile] = useState<{
+    name?: string;
+    email?: string;
+  } | null>(null);
 
-  // Fetch user profile to get user id and name/email for join
   useEffect(() => {
     const user = JSON.parse(Cookies.get("user") || "{}");
+    setCookieUser(user);
     const id = user?._id || user?.id;
     if (id) setUserId(id);
     if (user?.name || user?.email) {
@@ -55,22 +63,23 @@ export default function EventsPage() {
     }
   }, []);
 
-  // Fetch full profile for name/email if not in cookie
   useEffect(() => {
     if (!userId || userProfile?.name) return;
     const token = Cookies.get("accessToken");
     if (!token) return;
-    fetch(`${BASE_URL}/users/profile`, { headers: { Authorization: `Bearer ${token}` } })
-      .then((res) => res.ok && res.json())
+    fetch(`${BASE_URL}/users/profile`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
         const u = data?.data || data;
         if (u?.name || u?.email) setUserProfile({ name: u.name, email: u.email });
       })
-      .catch(() => {});
+      .catch((err) => {
+        console.error("Failed to load profile", err);
+      });
   }, [userId, userProfile?.name]);
 
-
-  // Fetch user events when userId is available
   useEffect(() => {
     if (!userId) return;
     const fetchUserEvents = async () => {
@@ -80,29 +89,18 @@ export default function EventsPage() {
         const token = Cookies.get("accessToken");
         const res = await fetch(
           `${BASE_URL}/events/user-events/${userId}/upcoming`,
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          },
+          { headers: { Authorization: `Bearer ${token}` } },
         );
         if (!res.ok) {
           setUserEventsError("Failed to fetch your events");
-          setLoadingUserEvents(false);
           return;
         }
         const data = await res.json();
-
         let eventsArray: Event[] = [];
-
-        if (Array.isArray(data)) {
-          eventsArray = data;
-        } else if (Array.isArray(data.events)) {
-          eventsArray = data.events;
-        } else if (Array.isArray(data.data)) {
-          eventsArray = data.data;
-        }
-
+        if (Array.isArray(data)) eventsArray = data;
+        else if (Array.isArray(data.events)) eventsArray = data.events;
+        else if (Array.isArray(data.data)) eventsArray = data.data;
         setUserEvents(eventsArray);
-        console.log("userEvents API response:", data);
       } catch {
         setUserEventsError("Network error");
       } finally {
@@ -119,18 +117,14 @@ export default function EventsPage() {
       try {
         const token = Cookies.get("accessToken");
         const res = await fetch(`${BASE_URL}/events/upcoming`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+          headers: { Authorization: `Bearer ${token}` },
         });
         if (!res.ok) {
           setError("Failed to fetch events");
-          setLoading(false);
           return;
         }
         const data = await res.json();
-        setEvents(data);
-        setFilteredEvents(data); // Initialize filtered events with all events
+        setEvents(Array.isArray(data) ? data : data?.data || []);
       } catch {
         setError("Network error");
       } finally {
@@ -140,6 +134,42 @@ export default function EventsPage() {
     fetchEvents();
   }, []);
 
+  const levelOptions = useMemo(() => {
+    const levels = Array.from(
+      new Set(events.map((e) => e.level).filter(Boolean)),
+    );
+    return levels.length > 0 ? ["All", ...levels] : [];
+  }, [events]);
+
+  const typeOptions = useMemo(() => {
+    const types = Array.from(
+      new Set(events.map((e) => e.type).filter(Boolean)),
+    );
+    return types.length > 0 ? ["All", ...types] : [];
+  }, [events]);
+
+  const filteredEvents = useMemo(() => {
+    return events.filter((event) => {
+      if (!matchesDayChip(event.startDate, selectedFilter)) return false;
+      if (
+        !matchesSearch(searchQuery, [
+          event.eventName,
+          event.details,
+          event.teacher?.name,
+          event.location,
+        ])
+      ) {
+        return false;
+      }
+      if (levelFilter !== "All" && event.level !== levelFilter) return false;
+      if (typeFilter !== "All" && event.type !== typeFilter) return false;
+      return true;
+    });
+  }, [events, selectedFilter, searchQuery, levelFilter, typeFilter]);
+
+  /**
+   * Opens Zoom for a registered online event.
+   */
   const handleJoinEvent = (eventId: string) => {
     const event = userEvents.find((e) => e._id === eventId);
     if (!event?.meeting_number) {
@@ -160,349 +190,198 @@ export default function EventsPage() {
     setJoiningEvent(null);
   };
 
-  // Filter events based on selected filter
-  const filterEvents = (filter: string) => {
-    setSelectedFilter(filter);
-
-    const today = new Date().toISOString().split("T")[0];
-    const tomorrow = new Date();
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    const tomorrowDate = tomorrow.toISOString().split("T")[0];
-
-    if (filter === "All") {
-      setFilteredEvents(events);
-    } else if (filter === "Today") {
-      setFilteredEvents(
-        events.filter((event) => {
-          const eventDate = new Date(event.startDate)
-            .toISOString()
-            .split("T")[0];
-          return eventDate === today;
-        }),
-      );
-    } else if (filter === "Tomorrow") {
-      setFilteredEvents(
-        events.filter((event) => {
-          const eventDate = new Date(event.startDate)
-            .toISOString()
-            .split("T")[0];
-          return eventDate === tomorrowDate;
-        }),
-      );
-    }
+  /**
+   * Navigates to event booking page.
+   */
+  const handleBook = (id: string) => {
+    router.push(`/Homepage/Events/book?eventId=${id}`);
   };
 
-  // Update filtered events when events change
-  useEffect(() => {
-    setFilteredEvents(events);
-  }, [events]);
+  /**
+   * Renders a mode section grid or empty/loading/error state.
+   */
+  const renderGrid = (
+    list: Event[],
+    emptyMessage: string,
+    expanded: boolean,
+  ) => {
+    if (loading) {
+      return (
+        <div className="col-span-full grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+          {[1, 2, 3].map((i) => (
+            <div
+              key={i}
+              className="h-[260px] rounded-xl bg-orange-50/60 animate-pulse"
+            />
+          ))}
+        </div>
+      );
+    }
+    if (error) {
+      return (
+        <div className="col-span-full">
+          <EmptyState
+            message={error}
+            actionLabel="Retry"
+            onAction={() => window.location.reload()}
+          />
+        </div>
+      );
+    }
+    if (list.length === 0) {
+      return (
+        <div className="col-span-full">
+          <EmptyState message={emptyMessage} />
+        </div>
+      );
+    }
+    const visible = expanded ? list : list.slice(0, 3);
+    return visible.map((event) => (
+      <EventListingCard
+        key={event._id}
+        event={event}
+        onBook={handleBook}
+        isOwn={isOwnResource(cookieUser, event.teacher)}
+      />
+    ));
+  };
 
   const onlineEvents = filteredEvents.filter((e) => e.eventmode === "online");
   const offlineEvents = filteredEvents.filter((e) => e.eventmode === "offline");
 
-  const filters = ["All", "Today", "Tomorrow"];
-
   return (
-    <div className="flex justify-center items-center py-10 px-4">
-      <div className="bg-white rounded-xl shadow-md p-6 w-full max-w-6xl space-y-8">
-        {/* Banner Section */}
-        <div className="relative w-full h-[220px] rounded-lg overflow-hidden">
-          <Image
-            src="/images/peoples.svg"
-            alt="Upcoming Events"
-            layout="fill"
-            objectFit="cover"
-            className="brightness-[0.6] rounded-lg"
-          />
-          <div className="absolute inset-0 flex items-center justify-start px-8">
+    <div className="px-4 sm:px-6 py-6 max-w-6xl mx-auto w-full">
+      <div className="bg-white rounded-xl border border-orange-100/60 shadow-sm p-4 sm:p-6 space-y-6">
+        <div className="relative w-full rounded-2xl overflow-hidden bg-[#ff9468] shadow-[0_4px_20px_rgba(255,148,104,0.3)] px-6 sm:px-8 py-6 sm:py-7">
+          <div className="flex items-end justify-between gap-4">
             <div className="text-white max-w-md">
-              <h2 className="text-2xl font-bold mb-1">Upcoming Events</h2>
-              <p className="text-sm">
+              <h2 className="text-xl sm:text-2xl font-bold mb-1">
+                Upcoming Events
+              </h2>
+              <p className="text-sm text-white/90">
                 Discover wellness activities and join our community events.
               </p>
             </div>
+            <span className="shrink-0 bg-white text-[#c2410c] text-xs font-bold px-2.5 py-1 rounded-full shadow-sm">
+              {filteredEvents.length} events
+            </span>
           </div>
-          <div className="absolute top-4 right-4 bg-orange-500 text-white text-sm px-3 py-1 rounded-full shadow-md">
-            {filteredEvents.length}+ Events
+        </div>
+
+        <ListingFilterBar
+          searchValue={searchQuery}
+          searchPlaceholder="Search events, hosts, locations…"
+          onSearchChange={setSearchQuery}
+          dayOptions={DAY_CHIPS}
+          daySelected={selectedFilter}
+          onDaySelect={setSelectedFilter}
+          levelOptions={levelOptions}
+          levelSelected={levelFilter}
+          onLevelSelect={setLevelFilter}
+          typeOptions={typeOptions}
+          typeSelected={typeFilter}
+          onTypeSelect={setTypeFilter}
+          typeLabel="Type"
+          resultCount={filteredEvents.length}
+          resultNoun="event"
+          onClear={() => {
+            setSearchQuery("");
+            setSelectedFilter("All");
+            setLevelFilter("All");
+            setTypeFilter("All");
+          }}
+        />
+
+        <section className="space-y-3">
+          <SectionHeader
+            title="Online Events"
+            showAction={onlineEvents.length > 3}
+            actionLabel={seeAllOnline ? "Show less" : "See all"}
+            onAction={() => setSeeAllOnline((v) => !v)}
+          />
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            {renderGrid(onlineEvents, "No events scheduled", seeAllOnline)}
           </div>
-        </div>
+        </section>
 
-        {/* Filter Tabs */}
-        <div className="flex gap-3">
-          {filters.map((filter, index) => (
-            <button
-              key={index}
-              className={`px-4 py-1 rounded-full text-sm font-medium transition-colors ${selectedFilter === filter
-                ? "bg-orange-500 text-white"
-                : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                }`}
-              onClick={() => filterEvents(filter)}
-            >
-              {filter}
-            </button>
-          ))}
-        </div>
-
-        {/* Online Events Header */}
-        <div className="flex justify-between items-center">
-          <h3 className="text-lg font-semibold">Online Events</h3>
-          {onlineEvents.length > 3 && (
-            <button
-              className="text-orange-500 text-sm font-medium"
-              onClick={() => setSeeAllOnline((v) => !v)}
-            >
-              {seeAllOnline ? "Show Less" : "See All"}
-            </button>
-          )}
-        </div>
-
-        {/* Event Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {loading ? (
-            <div className="col-span-3 text-center py-8">Loading events...</div>
-          ) : error ? (
-            <div className="col-span-3 text-center text-red-500 py-8">
-              {error}
-            </div>
-          ) : onlineEvents.length === 0 ? (
-            <div className="col-span-3 text-center py-8">
-              No online events found.
-            </div>
-          ) : (
-            (seeAllOnline ? onlineEvents : onlineEvents.slice(0, 3)).map(
-              (event) => (
-                <div
-                  key={event._id}
-                  className="rounded-xl border border-gray-200 overflow-hidden shadow-sm bg-white"
-                >
-                  {/* Card Image */}
-                  <div className="relative h-[150px] w-full">
-                    <Image
-                      src={event.image || "/images/class1.svg"}
-                      alt={event.eventName}
-                      layout="fill"
-                      objectFit="cover"
-                      className="rounded-t-xl"
-                    />
-                    {event.status && (
-                      <div className="absolute top-2 right-2 bg-red-500 text-white text-xs px-2 py-0.5 rounded-full">
-                        Live
-                      </div>
-                    )}
-                  </div>
-                  {/* Card Body */}
-                  <div className="p-4 space-y-2">
-                    <h4 className="text-sm font-semibold">{event.eventName}</h4>
-                    {/* Instructor */}
-                    <div className="flex items-center gap-2 text-xs text-gray-600">
-                      <Image
-                        src={event.teacher?.profileImage || "/images/logo.svg"}
-                        width={24}
-                        height={24}
-                        alt={event.teacher?.name || "Instructor"}
-                        className="rounded-full object-cover"
-                      />
-                      <span>with {event.teacher?.name}</span>
-                    </div>
-                    {/* Details */}
-                    <div className="flex items-center gap-3 text-xs text-gray-500">
-                      <div className="flex items-center gap-1">
-                        <Clock size={14} />
-                        {new Date(event.startDate).toLocaleDateString()}{" "}
-                        {event.startTime}
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <DollarSign size={14} />
-                        {event.type === "free" ? "Free" : "Paid"}
-                      </div>
-                    </div>
-                    {/* Bottom Row */}
-                    <div className="flex justify-between items-center text-xs">
-                      <div className="flex items-center text-gray-400 gap-1">
-                        <Users size={14} />
-                        {event.availableseats} spots left
-                      </div>
-                      <button
-                        className="bg-orange-500 text-white text-xs px-3 py-1 rounded-md hover:bg-orange-600 cursor-pointer"
-                        onClick={() =>
-                          router.push(
-                            `/Homepage/Events/book?eventId=${event._id}`,
-                          )
-                        }
-                      >
-                        Book
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              ),
-            )
-          )}
-        </div>
-
-        <div className="flex justify-between items-center">
-          <h3 className="text-lg font-semibold">Offline Events</h3>
-          {offlineEvents.length > 3 && (
-            <button
-              className="text-orange-500 text-sm font-medium"
-              onClick={() => setSeeAllOffline((v) => !v)}
-            >
-              {seeAllOffline ? "Show Less" : "See All"}
-            </button>
-          )}
-        </div>
-
-        {/* Event Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {loading ? (
-            <div className="col-span-3 text-center py-8">Loading events...</div>
-          ) : error ? (
-            <div className="col-span-3 text-center text-red-500 py-8">
-              {error}
-            </div>
-          ) : offlineEvents.length === 0 ? (
-            <div className="col-span-3 text-center py-8">
-              No offline events found.
-            </div>
-          ) : (
-            (seeAllOffline ? offlineEvents : offlineEvents.slice(0, 3)).map(
-              (event) => (
-                <div
-                  key={event._id}
-                  className="rounded-xl border border-gray-200 overflow-hidden shadow-sm bg-white"
-                >
-                  {/* Card Image */}
-                  <div className="relative h-[150px] w-full">
-                    <Image
-                      src={event.image || "/images/class1.svg"}
-                      alt={event.eventName}
-                      layout="fill"
-                      objectFit="cover"
-                      className="rounded-t-xl"
-                    />
-                    {event.status && (
-                      <div className="absolute top-2 right-2 bg-red-500 text-white text-xs px-2 py-0.5 rounded-full">
-                        Live
-                      </div>
-                    )}
-                  </div>
-                  {/* Card Body */}
-                  <div className="p-4 space-y-2">
-                    <h4 className="text-sm font-semibold">{event.eventName}</h4>
-                    {/* Instructor */}
-                    <div className="flex items-center gap-2 text-xs text-gray-600">
-                      <Image
-                        src={event.teacher?.profileImage || "/images/logo.svg"}
-                        width={24}
-                        height={24}
-                        alt={event.teacher?.name || "Instructor"}
-                        className="rounded-full object-cover"
-                      />
-                      <span>with {event.teacher?.name}</span>
-                    </div>
-                    {/* Details */}
-                    <div className="flex items-center gap-3 text-xs text-gray-500">
-                      <div className="flex items-center gap-1">
-                        <Clock size={14} />
-                        {new Date(event.startDate).toLocaleDateString()}{" "}
-                        {event.startTime}
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <DollarSign size={14} />
-                        {event.type === "free" ? "Free" : "Paid"}
-                      </div>
-                    </div>
-                    {/* Bottom Row */}
-                    <div className="flex justify-between items-center text-xs">
-                      <div className="flex items-center text-gray-400 gap-1">
-                        <Users size={14} />
-                        {event.availableseats} spots left
-                      </div>
-                      <button
-                        className="bg-orange-500 text-white text-xs px-3 py-1 rounded-md hover:bg-orange-600 cursor-pointer"
-                        onClick={() =>
-                          router.push(
-                            `/Homepage/Events/book?eventId=${event._id}`,
-                          )
-                        }
-                      >
-                        Book
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              ),
-            )
-          )}
-        </div>
-
-        <div className="bg-white rounded-xl p-6 shadow-sm space-y-4">
-          {/* Header */}
-          <div className="flex justify-between items-center">
-            <h3 className="text-md font-semibold">My Events</h3>
-            <button className="text-sm text-orange-500 font-medium">
-              See All
-            </button>
+        <section className="space-y-3">
+          <SectionHeader
+            title="Offline Events"
+            showAction={offlineEvents.length > 3}
+            actionLabel={seeAllOffline ? "Show less" : "See all"}
+            onAction={() => setSeeAllOffline((v) => !v)}
+          />
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            {renderGrid(offlineEvents, "No offline events", seeAllOffline)}
           </div>
+        </section>
 
-          {/* Event List */}
+        <section className="rounded-xl border border-[#ffe0d0] bg-[#fff4ef]/50 p-4 space-y-3">
+          <SectionHeader title="My Events" showAction={false} />
           {loadingUserEvents ? (
-            <div className="text-center py-8">Loading events...</div>
+            <div className="h-20 rounded-lg bg-[#fff4ef] animate-pulse" />
           ) : userEventsError ? (
-            <div className="text-center text-red-500 py-8">
-              {userEventsError}
-            </div>
+            <EmptyState message={userEventsError} />
           ) : userEvents.length === 0 ? (
-            <div className="text-center py-8">No events scheduled.</div>
+            <EmptyState
+              message="No events scheduled"
+              actionLabel="Browse events"
+              onAction={() => setSelectedFilter("All")}
+            />
           ) : (
-            userEvents.map((event) => (
-              <div
-                key={event._id}
-                className="flex justify-between items-center bg-gray-50 rounded-lg px-4 py-3"
-              >
-                {/* Left Side */}
-                <div className="flex gap-3 items-center">
-                  <Image
-                    src={event.image || "/images/class1.svg"}
-                    alt={event.eventName}
-                    width={48}
-                    height={48}
-                    className="rounded-lg object-cover"
-                  />
-                  <div>
-                    <h4 className="text-sm font-medium">{event.eventName}</h4>
-                    <p className="text-xs text-gray-500">
-                      {new Date(event.startDate).toLocaleDateString()}{" "}
-                      {event.startTime}
-                    </p>
-                    <div className="flex items-center gap-4 text-xs text-gray-400 mt-1">
-                      <span>📍 {event.location}</span>
-                      <span>👥 {event.students?.length || 0} Enrolled</span>
+            <ul className="space-y-2">
+              {userEvents.map((event) => (
+                <li
+                  key={event._id}
+                  className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 bg-white rounded-lg border border-orange-50 px-3 py-2.5"
+                >
+                  <div className="flex gap-3 items-center min-w-0">
+                    <Image
+                      src={event.image || "/images/class1.svg"}
+                      alt={event.eventName}
+                      width={44}
+                      height={44}
+                      className="rounded-lg object-cover w-11 h-11 shrink-0"
+                    />
+                    <div className="min-w-0">
+                      <h4 className="text-sm font-medium text-gray-900 truncate">
+                        {event.eventName}
+                      </h4>
+                      <p className="text-xs text-gray-500">
+                        {formatDisplayDate(event.startDate)}
+                        {event.startTime ? ` ${event.startTime}` : ""}
+                      </p>
+                      <p className="text-xs text-gray-400 mt-0.5 truncate">
+                        {event.location} · {event.students?.length || 0} enrolled
+                      </p>
                     </div>
                   </div>
-                </div>
-                {/* Right Side: View Details + Join (for registered online events) */}
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => router.push(`/Homepage/Events/${event._id}`)}
-                    className="text-sm border px-3 py-1 rounded-md text-gray-700 hover:bg-gray-100"
-                  >
-                    View Details →
-                  </button>
-                  {event.eventmode === "online" && event.meeting_number && (
+                  <div className="flex items-center gap-2 shrink-0">
                     <button
-                      onClick={() => handleJoinEvent(event._id)}
-                      disabled={joiningEvent === event._id}
-                      className="text-sm bg-orange-500 text-white px-3 py-1 rounded-md hover:bg-orange-600 disabled:opacity-50"
+                      type="button"
+                      onClick={() =>
+                        router.push(`/Homepage/Events/${event._id}`)
+                      }
+                      className="text-sm border border-gray-200 px-3 py-1.5 rounded-md text-gray-700 hover:bg-gray-50 transition-colors"
                     >
-                      {joiningEvent === event._id ? "Joining..." : "Join"}
+                      Details
                     </button>
-                  )}
-                </div>
-              </div>
-            ))
+                    {event.eventmode === "online" && event.meeting_number ? (
+                      <button
+                        type="button"
+                        onClick={() => handleJoinEvent(event._id)}
+                        disabled={joiningEvent === event._id}
+                        className="text-sm bg-[#ed662e] text-white px-3 py-1.5 rounded-md hover:bg-[#c95520] disabled:opacity-50 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#ed662e]/40"
+                      >
+                        {joiningEvent === event._id ? "Joining…" : "Join"}
+                      </button>
+                    ) : null}
+                  </div>
+                </li>
+              ))}
+            </ul>
           )}
-        </div>
+        </section>
       </div>
     </div>
   );

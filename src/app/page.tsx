@@ -30,22 +30,34 @@ export default function Home() {
 
   const handleSignIn = async () => {
     setError("");
-    if (!email) {
+    const trimmed = email.trim().toLowerCase();
+    const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed);
+    if (!trimmed) {
       setError("Please enter your email.");
       toast.error("Please enter your email.");
       return;
     }
+    if (!emailOk) {
+      setError("Please enter a valid email address.");
+      toast.error("Please enter a valid email address.");
+      return;
+    }
+    setEmail(trimmed);
     setLoading(true);
     try {
       const res = await fetch(`${BASE_URL}/auth/send-login-otp`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
+        body: JSON.stringify({ email: trimmed }),
       });
       if (!res.ok) {
-        const data = await res.json();
-        setError(data.message || "Failed to send OTP.");
-        toast.error(data.message || "Failed to send OTP");
+        const data = await res.json().catch(() => ({}));
+        const msg =
+          res.status === 429
+            ? data.message || "Too many OTP requests. Please wait and try again."
+            : data.message || "Failed to send OTP.";
+        setError(msg);
+        toast.error(msg);
         setLoading(false);
         return;
       }
@@ -62,7 +74,7 @@ export default function Home() {
   const handleVerify = async () => {
     setError("");
     const otp = verificationCode.join("");
-    if (otp.length !== 4) {
+    if (!/^\d{4}$/.test(otp)) {
       setError("Please enter the 4-digit OTP.");
       toast.error("Please enter the 4-digit OTP");
       return;
@@ -72,59 +84,69 @@ export default function Home() {
       const res = await fetch(`${BASE_URL}/auth/verify-login-otp`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, otp }),
+        body: JSON.stringify({ email: email.trim().toLowerCase(), otp }),
       });
       if (!res.ok) {
-        const data = await res.json();
-        setError(data.message || "Invalid OTP.");
-        toast.error(data.message || "OTP is invalid");
+        const data = await res.json().catch(() => ({}));
+        const msg =
+          res.status === 429
+            ? data.message || "Too many attempts. Please wait and try again."
+            : data.message || "Invalid OTP.";
+        setError(msg);
+        toast.error(msg);
         setLoading(false);
         return;
       }
       const data = await res.json();
-      const userRole = data?.user?.role;
+      const userRole = data?.user?.role as string | undefined;
+      const cookieExpires =
+        data.tokens?.access?.expires
+          ? new Date(data.tokens.access.expires)
+          : 7;
 
-      console.log("OTP verify response:", data);
-
-      // 🚨 CHECK IF LOGIN TAB MATCHES ROLE
-      if (
-        (loginType === "student" && userRole !== "user") ||
-        (loginType === "coach" && userRole !== "teacher")
-      ) {
-        toast.error(`This email is not registered as a ${loginType}`);
-        setStep("signin");
-        setLoading(false);
-        return;
+      // Tab is a UX hint only — never reject after OTP (OTP is already consumed).
+      if (loginType === "student" && userRole === "teacher") {
+        toast("This account is a Wellness Coach — signing you in as coach");
+      } else if (loginType === "coach" && userRole === "user") {
+        toast("This account is a Student — signing you in as student");
       }
 
-      // Store access token in cookies
-      if (data.tokens && data.tokens.access && data.tokens.access.token) {
+      if (data.tokens?.access?.token) {
         Cookies.set("accessToken", data.tokens.access.token, {
-          expires: data.tokens.access.expires
-            ? new Date(data.tokens.access.expires)
-            : 7, // fallback 7 days
+          expires: cookieExpires,
+          path: "/",
+          sameSite: "lax",
         });
       }
-      // Store user details in cookies
+
+      // Slim cookie — full profile payloads can exceed browser cookie size limits.
       if (data.user) {
-        Cookies.set("user", JSON.stringify(data.user), {
-          expires:
-            data.tokens && data.tokens.access && data.tokens.access.expires
-              ? new Date(data.tokens.access.expires)
-              : 7,
+        const slimUser = {
+          id: data.user.id || data.user._id,
+          _id: data.user._id || data.user.id,
+          name: data.user.name,
+          email: data.user.email,
+          role: data.user.role,
+          profileImage: data.user.profileImage,
+        };
+        Cookies.set("user", JSON.stringify(slimUser), {
+          expires: cookieExpires,
+          path: "/",
+          sameSite: "lax",
         });
       }
 
       setStep("success");
       toast.success("OTP verified successfully");
 
+      const dest =
+        userRole === "teacher"
+          ? "/Homepage/Classes/Scheduled"
+          : "/Homepage/Classes";
+
       setTimeout(() => {
-        if (userRole === "user") {
-          router.push("/Homepage");
-        } else if (userRole === "teacher") {
-          router.push("/Homepage");
-        }
-      }, 3000);
+        router.push(dest);
+      }, 1200);
     } catch {
       setError("Network error. Please try again.");
       toast.error("Network error");
@@ -146,6 +168,11 @@ export default function Home() {
   };
 
   const handleKeyDown = (index: number, e: React.KeyboardEvent) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      void handleVerify();
+      return;
+    }
     if (e.key === "Backspace" && !verificationCode[index] && index > 0) {
       const prevInput = document.getElementById(`code-input-${index - 1}`);
       if (prevInput) prevInput.focus();
@@ -238,10 +265,17 @@ export default function Home() {
                   className="email-field"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      void handleSignIn();
+                    }
+                  }}
                   disabled={loading}
                   autoComplete="email"
                   autoCapitalize="none"
                   autoCorrect="off"
+                  aria-label="Email address"
                 />
               </div>
               {error && (

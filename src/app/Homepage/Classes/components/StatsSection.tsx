@@ -39,18 +39,18 @@ export default function StatsSection({
 ];
 
   return (
-    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6 sm:mb-10">
+    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
       {stats.map((item, idx) => (
         <div
           key={idx}
-          className="bg-white shadow-sm rounded-xl p-3 sm:p-4 flex items-center space-x-3 sm:space-x-4 border border-gray-100 hover:shadow-md transition-shadow duration-200"
+          className="bg-white shadow-sm rounded-xl p-3 flex items-center space-x-3 border border-orange-100/80 hover:shadow-md transition-shadow duration-200"
         >
-          <div className="bg-[#F38A6A]/10 rounded-full p-2 flex-shrink-0">
+          <div className="bg-orange-50 rounded-full p-2 flex-shrink-0">
             {item.icon}
           </div>
           <div className="min-w-0 flex-1">
-            <h2 className="text-lg sm:text-xl font-semibold text-gray-900">{item.value}</h2>
-            <p className="text-gray-500 text-xs sm:text-sm truncate">{item.label}</p>
+            <h2 className="text-lg font-semibold text-gray-900">{item.value}</h2>
+            <p className="text-gray-500 text-xs truncate">{item.label}</p>
           </div>
         </div>
       ))}

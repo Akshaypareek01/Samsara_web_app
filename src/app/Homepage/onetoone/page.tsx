@@ -240,8 +240,13 @@ export default function OneToOneClassesPage() {
                       <Users size={14} />
                       1-on-1 Session
                     </div>
-                    <button className="bg-orange-500 text-white text-xs px-3 py-1 rounded-md hover:bg-orange-600 cursor-pointer">
-                      Book
+                    <button
+                      type="button"
+                      disabled
+                      title="1:1 booking coming soon"
+                      className="bg-gray-300 text-white text-xs px-3 py-1 rounded-md cursor-not-allowed"
+                    >
+                      Coming soon
                     </button>
                   </div>
                 </div>
@@ -250,63 +255,9 @@ export default function OneToOneClassesPage() {
           )}
         </div>
 
-        {/* My Sessions Section */}
-        <div className="bg-white rounded-xl p-6 shadow-sm space-y-4">
-          {/* Header */}
-          <div className="flex justify-between items-center">
-            <h3 className="text-md font-semibold">My Sessions</h3>
-            <button className="text-sm text-orange-500 font-medium">
-              See All
-            </button>
-          </div>
-
-          {/* Session List */}
-          {[
-            {
-              title: "Personal Yoga Session",
-              time: "Tomorrow, 9:00 AM",
-              teacher: "Akshay Teacher",
-              duration: "60 mins",
-              img: "https://images.unsplash.com/photo-1502685104226-ee32379fefbe?auto=format&fit=facearea&facepad=3&w=64&h=64&q=80",
-            },
-            {
-              title: "Meditation Guidance",
-              time: "Friday, 7:00 PM",
-              teacher: "Pradeep Mehta",
-              duration: "45 mins",
-              img: "https://images.unsplash.com/photo-1502685104226-ee32379fefbe?auto=format&fit=facearea&facepad=3&w=64&h=64&q=80",
-            },
-          ].map((session, index) => (
-            <div
-              key={index}
-              className="flex justify-between items-center bg-gray-50 rounded-lg px-4 py-3"
-            >
-              {/* Left Side */}
-              <div className="flex gap-3 items-center">
-                <Image
-                  src={session.img}
-                  alt={session.title}
-                  width={48}
-                  height={48}
-                  className="rounded-lg object-cover"
-                />
-                <div>
-                  <h4 className="text-sm font-medium">{session.title}</h4>
-                  <p className="text-xs text-gray-500">{session.time}</p>
-                  <div className="flex items-center gap-4 text-xs text-gray-400 mt-1">
-                    <span>👨‍🏫 {session.teacher}</span>
-                    <span>⏱️ {session.duration}</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Right Side Button */}
-              <button className="text-sm border px-3 py-1 rounded-md text-gray-700 hover:bg-gray-100">
-                Join Session →
-              </button>
-            </div>
-          ))}
-        </div>
+        <p className="text-center text-xs text-gray-400 pt-2">
+          1:1 booking coming soon
+        </p>
       </div>
     </div>
   );

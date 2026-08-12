@@ -775,8 +775,17 @@ export default function InstructorProfile() {
 
       {/* Modal Overlay */}
       {activeModal && (
-        <div className="fixed inset-0  bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto">
+        <div
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+          role="presentation"
+          onClick={closeModal}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            className="bg-white rounded-xl shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
             {/* About Modal */}
             {activeModal === "about" && (
               <div className="p-6">

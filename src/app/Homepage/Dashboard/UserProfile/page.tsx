@@ -24,6 +24,7 @@ import {
 import { getCookie } from "cookies-next";
 import { BASE_URL } from "@/lib/utils";
 import toast, { Toaster } from "react-hot-toast";
+import LetterAvatar from "@/components/LetterAvatar";
 
 interface UserImage {
   _id: string;
@@ -444,7 +445,7 @@ export default function UserProfilePage() {
   }
 
   const getLatestProfileImage = () => {
-    return userProfile.profileImage || "/images/user1.svg";
+    return userProfile.profileImage || undefined;
   };
 
   return (
@@ -474,61 +475,64 @@ export default function UserProfilePage() {
         }}
       />
 
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-[60vh]">
         {/* Header */}
-        <div className="bg-white shadow-sm ">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex justify-between items-center py-6">
-              <h1 className="text-2xl font-bold text-gray-900">My Profile</h1>
+        <div className="bg-white border-b border-gray-200">
+          <div className="max-w-6xl mx-auto px-4 sm:px-6">
+            <div className="flex justify-between items-center py-4">
+              <h1 className="text-xl font-semibold text-gray-900">My Profile</h1>
               <button
+                type="button"
                 onClick={() => setIsEditModalOpen(true)}
-                className="flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg"
+                className="flex items-center gap-2 bg-[#ed662e] hover:bg-[#c95520] text-white px-3.5 py-2 rounded-lg text-sm font-medium min-h-[40px] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#ed662e]/40"
               >
-                <Edit size={16} />
-                Edit Profile
+                <Edit size={16} aria-hidden />
+                Edit profile
               </button>
             </div>
           </div>
         </div>
 
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-5">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
             {/* Left Column - Profile Card */}
             <div className="lg:col-span-1">
-              <div className="bg-white rounded-xl shadow-sm p-6">
+              <div className="bg-white rounded-xl border border-orange-100/80 shadow-sm p-4">
                 {/* Profile Image */}
-                <div className="text-center mb-6">
+                <div className="text-center mb-4">
                   <div className="relative inline-block">
-                    <div className="w-32 h-32 rounded-full overflow-hidden border-4 border-orange-100">
-                      <Image
+                    <div className="inline-flex rounded-full overflow-hidden border-4 border-[#ffe0d0]">
+                      <LetterAvatar
+                        name={userProfile.name}
                         src={getLatestProfileImage()}
-                        alt={userProfile.name}
-                        width={128}
-                        height={128}
-                        className="w-full h-full object-cover"
+                        size={96}
                       />
                     </div>
-                    <button className="absolute bottom-0 right-0 bg-orange-500 hover:bg-orange-600 text-white p-2 rounded-full shadow-lg">
-                      <Camera size={16} />
+                    <button
+                      type="button"
+                      aria-label="Change profile photo"
+                      className="absolute bottom-0 right-0 bg-[#ed662e] hover:bg-[#c95520] text-white p-2 rounded-full shadow-lg min-h-[36px] min-w-[36px]"
+                    >
+                      <Camera size={14} aria-hidden />
                     </button>
                   </div>
-                  <h2 className="text-xl font-bold text-gray-900 mt-4">
+                  <h2 className="text-lg font-semibold text-gray-900 mt-3">
                     {userProfile.name}
                   </h2>
-                  <p className="text-gray-600">{userProfile.email}</p>
+                  <p className="text-sm text-gray-500">{userProfile.email}</p>
                   <div className="mt-2">
-                    <span className="bg-orange-100 text-orange-800 text-xs px-3 py-1 rounded-full font-medium">
+                    <span className="bg-orange-100 text-orange-800 text-xs px-2.5 py-0.5 rounded-full font-medium">
                       {userProfile.userCategory || "Personal"}
                     </span>
                   </div>
                 </div>
 
                 {/* Basic Info */}
-                <div className="space-y-4">
+                <div className="space-y-3">
                   <div className="flex items-center gap-3">
-                    <User className="w-5 h-5 text-gray-400" />
+                    <User className="w-4 h-4 text-gray-400" aria-hidden />
                     <div>
-                      <p className="text-sm font-medium text-gray-900">Role</p>
+                      <p className="text-xs font-medium text-gray-900">Role</p>
                       <p className="text-sm text-gray-600 capitalize">
                         {userProfile.role}
                       </p>
@@ -536,9 +540,9 @@ export default function UserProfilePage() {
                   </div>
 
                   <div className="flex items-center gap-3">
-                    <Mail className="w-5 h-5 text-gray-400" />
+                    <Mail className="w-4 h-4 text-gray-400" aria-hidden />
                     <div>
-                      <p className="text-sm font-medium text-gray-900">Email</p>
+                      <p className="text-xs font-medium text-gray-900">Email</p>
                       <p className="text-sm text-gray-600">
                         {userProfile.email}
                       </p>
@@ -547,9 +551,9 @@ export default function UserProfilePage() {
 
                   {userProfile.age && (
                     <div className="flex items-center gap-3">
-                      <Calendar className="w-5 h-5 text-gray-400" />
+                      <Calendar className="w-4 h-4 text-gray-400" aria-hidden />
                       <div>
-                        <p className="text-sm font-medium text-gray-900">Age</p>
+                        <p className="text-xs font-medium text-gray-900">Age</p>
                         <p className="text-sm text-gray-600">
                           {userProfile.age} years
                         </p>
@@ -631,7 +635,7 @@ export default function UserProfilePage() {
 
             {/* Right Column - Tabs and Content */}
             <div className="lg:col-span-2">
-              <div className="bg-white rounded-xl shadow-sm">
+              <div className="bg-white rounded-xl border border-orange-100/80 shadow-sm">
                 {/* Tab Navigation */}
                 <div className="">
                   <nav className="flex space-x-8 px-6">
@@ -948,53 +952,73 @@ export default function UserProfilePage() {
         </div>
       </div>
 
-      {/* Edit Profile Modal */}
+      {/* Edit Profile Modal — solid backdrop (matches Modal.tsx) */}
       {isEditModalOpen && (
-        <div className="fixed inset-0 bg-opacity-50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
-            <div className="p-6">
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-2xl font-bold text-gray-900">
-                  Edit Profile
-                </h2>
-                <button
-                  onClick={() => setIsEditModalOpen(false)}
-                  className="text-gray-500 hover:text-gray-700"
-                >
-                  <X size={24} />
-                </button>
-              </div>
+        <div
+          className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+          role="presentation"
+          onClick={() => setIsEditModalOpen(false)}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label="Edit Profile"
+            className="bg-white rounded-xl shadow-xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between gap-3 px-5 py-4 border-b border-gray-100 shrink-0">
+              <h2 className="text-lg font-semibold text-gray-900">
+                Edit profile
+              </h2>
+              <button
+                type="button"
+                aria-label="Close"
+                onClick={() => setIsEditModalOpen(false)}
+                className="p-2 rounded-full hover:bg-gray-100 text-gray-500 transition"
+              >
+                <X size={20} aria-hidden />
+              </button>
+            </div>
 
-              <div className="space-y-6">
+            <div className="px-5 py-4 overflow-y-auto flex-1">
+              <div className="space-y-5">
                 {/* Profile Image Section */}
                 <div className="text-center">
                   <div className="relative inline-block">
-                    <div className="w-32 h-32 rounded-full overflow-hidden border-4 border-orange-100 mx-auto">
-                      <Image
-                        src={
-                          profileImagePreview ||
-                          editFormData.profileImage ||
-                          "/images/user1.svg"
-                        }
-                        alt="Profile"
-                        width={128}
-                        height={128}
-                        className="w-full h-full object-cover"
-                      />
+                    <div className="inline-flex rounded-full overflow-hidden border-4 border-[#ffe0d0] mx-auto">
+                      {profileImagePreview || editFormData.profileImage ? (
+                        <Image
+                          src={
+                            (profileImagePreview ||
+                              editFormData.profileImage) as string
+                          }
+                          alt="Profile"
+                          width={128}
+                          height={128}
+                          className="w-32 h-32 object-cover"
+                        />
+                      ) : (
+                        <LetterAvatar
+                          name={editFormData.name || userProfile.name}
+                          size={128}
+                        />
+                      )}
                     </div>
                     <div className="flex justify-center mt-4 gap-2">
                       <button
+                        type="button"
                         onClick={triggerFileInput}
                         className="flex items-center gap-1 bg-gray-200 hover:bg-gray-300 text-gray-800 px-3 py-1 rounded-md text-sm"
                       >
-                        <Camera size={14} />
+                        <Camera size={14} aria-hidden />
                         Change
                       </button>
                       <button
+                        type="button"
                         onClick={handleRemoveImage}
                         className="flex items-center gap-1 bg-red-100 hover:bg-red-200 text-red-700 px-3 py-1 rounded-md text-sm"
                       >
-                        <Trash2 size={14} />
+                        <Trash2 size={14} aria-hidden />
                         Remove
                       </button>
                     </div>

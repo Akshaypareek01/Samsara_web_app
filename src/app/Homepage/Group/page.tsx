@@ -2,355 +2,352 @@
 
 import Image from "next/image";
 import { Clock, DollarSign, Users } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { BASE_URL } from "@/lib/utils";
+import { getUserId } from "@/lib/userId";
+import { isOwnResource } from "@/lib/isOwnHost";
+import { DAY_CHIPS, matchesDayChip, matchesSearch } from "@/lib/listingFilters";
 import Cookies from "js-cookie";
-import { useRouter } from "next/navigation";
-import { usePathname } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
+import EmptyState from "@/components/EmptyState";
+import ListingFilterBar from "@/components/ListingFilterBar";
+import SectionHeader from "@/components/SectionHeader";
+import LetterAvatar from "@/components/LetterAvatar";
+import { formatDisplayDateTime } from "@/lib/formatDisplayDate";
 
 interface ClassType {
   _id?: string;
   image?: string;
   title?: string;
-  teacher?: { name?: string; profileImage?: string };
+  description?: string;
+  teacher?: {
+    _id?: string;
+    id?: string;
+    name?: string;
+    profileImage?: string;
+  };
   schedule?: string;
   type?: string;
+  classType?: string;
+  level?: string | string[];
   status?: string;
   availableseats?: number;
-  startDate?: string; // Add startDate for filtering
+  startDate?: string;
 }
 
+/**
+ * Normalizes class level field (string or string[]) for chip filtering.
+ * @param level - Class level from API
+ */
+function normalizeLevel(level?: string | string[]): string {
+  if (!level) return "";
+  return Array.isArray(level) ? level[0] || "" : level;
+}
+
+/**
+ * Group classes catalog with enrolled list.
+ */
 export default function ClassesPage() {
   const router = useRouter();
   const [classes, setClasses] = useState<ClassType[]>([]);
   const [myClasses, setMyClasses] = useState<ClassType[]>([]);
-  const [filteredClasses, setFilteredClasses] = useState<ClassType[]>([]);
   const [selectedFilter, setSelectedFilter] = useState("All");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [levelFilter, setLevelFilter] = useState("All");
+  const [typeFilter, setTypeFilter] = useState("All");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [seeAll, setSeeAll] = useState(false);
   const pathname = usePathname();
 
-const user = JSON.parse(Cookies.get("user") || "{}");
-const studentId = user?._id;
+  const user = JSON.parse(Cookies.get("user") || "{}");
+  const studentId = getUserId(user);
 
-
-  // Fetch all available classes to display in Group page
   useEffect(() => {
     const fetchClasses = async () => {
       setLoading(true);
       setError("");
-
       try {
         const token = Cookies.get("accessToken");
-
         const res = await fetch(`${BASE_URL}/classes`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+          headers: { Authorization: `Bearer ${token}` },
         });
-
         const data = await res.json();
-
         const classArray = data.data || [];
-
         setClasses(classArray);
-        setFilteredClasses(classArray);
       } catch {
         setError("Failed to fetch classes");
       } finally {
         setLoading(false);
       }
     };
-
     fetchClasses();
   }, []);
 
-  // Fetch all enrolled classes for My Classes section
   useEffect(() => {
-  if (!studentId) return;
+    if (!studentId) return;
+    const fetchMyClasses = async () => {
+      try {
+        const token = Cookies.get("accessToken");
+        const res = await fetch(
+          `${BASE_URL}/classes/student/${studentId}/classes`,
+          { headers: { Authorization: `Bearer ${token}` } },
+        );
+        const data = await res.json();
+        setMyClasses(data.data || []);
+      } catch (err) {
+        console.error("Failed to fetch my classes", err);
+      }
+    };
+    fetchMyClasses();
+  }, [studentId, pathname]);
 
-  const fetchMyClasses = async () => {
-    try {
-      const token = Cookies.get("accessToken");
-
-      const res = await fetch(
-        `${BASE_URL}/classes/student/${studentId}/classes`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-
-      const data = await res.json();
-
-      setMyClasses(data.data || []);
-    } catch (err) {
-      console.log("Failed to fetch my classes", err);
-    }
-  };
-
-  fetchMyClasses();
-}, [studentId, pathname]);
-
-  // Filter classes based on selected filter
-  const filterClasses = (filter: string) => {
-    setSelectedFilter(filter);
-
-    const today = new Date().toISOString().split("T")[0];
-    const tomorrow = new Date();
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    const tomorrowDate = tomorrow.toISOString().split("T")[0];
-
-    if (filter === "All") {
-      setFilteredClasses(classes);
-    } else if (filter === "Today") {
-      setFilteredClasses(
-        classes.filter((classItem) => {
-          // Use startDate if available, otherwise use schedule
-          if (classItem.startDate) {
-            const classDate = new Date(classItem.startDate)
-              .toISOString()
-              .split("T")[0];
-            return classDate === today;
-          } else if (classItem.schedule) {
-            const classDate = new Date(classItem.schedule)
-              .toISOString()
-              .split("T")[0];
-            return classDate === today;
-          }
-          // If no date info, assume it's today's class
-          return true;
-        }),
-      );
-    } else if (filter === "Tomorrow") {
-      setFilteredClasses(
-        classes.filter((classItem) => {
-          if (classItem.startDate) {
-            const classDate = new Date(classItem.startDate)
-              .toISOString()
-              .split("T")[0];
-            return classDate === tomorrowDate;
-          } else if (classItem.schedule) {
-            const classDate = new Date(classItem.schedule)
-              .toISOString()
-              .split("T")[0];
-            return classDate === tomorrowDate;
-          }
-          // If no date info, assume it's not tomorrow's class
-          return false;
-        }),
-      );
-    }
-  };
-
-  // Update filtered classes when classes change
-  useEffect(() => {
-    setFilteredClasses(classes);
+  const levelOptions = useMemo(() => {
+    const levels = Array.from(
+      new Set(
+        classes
+          .map((c) => normalizeLevel(c.level))
+          .filter((l) => l.length > 0),
+      ),
+    );
+    return levels.length > 0 ? ["All", ...levels] : [];
   }, [classes]);
 
-  const filters = ["All", "Today", "Tomorrow"];
+  const typeOptions = useMemo(() => {
+    const types = Array.from(
+      new Set(
+        classes
+          .map((c) => c.classType || c.type)
+          .filter((t): t is string => !!t),
+      ),
+    );
+    return types.length > 0 ? ["All", ...types] : [];
+  }, [classes]);
+
+  const filteredClasses = useMemo(() => {
+    return classes.filter((classItem) => {
+      const dateRaw = classItem.startDate || classItem.schedule;
+      if (!matchesDayChip(dateRaw, selectedFilter)) return false;
+      if (
+        !matchesSearch(searchQuery, [
+          classItem.title,
+          classItem.description,
+          classItem.teacher?.name,
+        ])
+      ) {
+        return false;
+      }
+      const level = normalizeLevel(classItem.level);
+      if (levelFilter !== "All" && level !== levelFilter) return false;
+      const typeVal = classItem.classType || classItem.type || "";
+      if (typeFilter !== "All" && typeVal !== typeFilter) return false;
+      return true;
+    });
+  }, [classes, selectedFilter, searchQuery, levelFilter, typeFilter]);
+
+  const visible = seeAll ? filteredClasses : filteredClasses.slice(0, 6);
 
   return (
-    <div className="flex justify-center items-center py-10 px-4">
-      <div className="bg-white rounded-xl shadow-md p-6 w-full max-w-6xl space-y-8">
-        {/* Banner Section */}
-        <div className="relative w-full h-[220px] rounded-lg overflow-hidden">
-          <Image
-            src="/images/peoples.svg"
-            alt="Upcoming Classes"
-            fill
-            style={{ objectFit: "cover" }}
-            className="brightness-[0.6] rounded-lg"
-          />
-          <div className="absolute inset-0 flex items-center justify-start px-8">
+    <div className="px-4 sm:px-6 py-6 max-w-6xl mx-auto w-full">
+      <div className="bg-white rounded-xl border border-orange-100/60 shadow-sm p-4 sm:p-6 space-y-6">
+        <div className="relative w-full rounded-2xl overflow-hidden bg-[#ff9468] shadow-[0_4px_20px_rgba(255,148,104,0.3)] px-6 sm:px-8 py-6 sm:py-7">
+          <div className="flex items-end justify-between gap-4">
             <div className="text-white max-w-md">
-              <h2 className="text-2xl font-bold mb-1">Group Classes</h2>
-              <p className="text-sm">Practise Together, heal together.</p>
+              <h2 className="text-xl sm:text-2xl font-bold mb-1">
+                Group Classes
+              </h2>
+              <p className="text-sm text-white/90">
+                Practise together, heal together.
+              </p>
             </div>
+            <span className="shrink-0 bg-white text-[#c2410c] text-xs font-bold px-2.5 py-1 rounded-full shadow-sm">
+              {filteredClasses.length} classes
+            </span>
           </div>
-          <div className="absolute top-4 right-4 bg-orange-500 text-white text-sm px-3 py-1 rounded-full shadow-md">
-            {filteredClasses.length}+ Classes{" "}
-            {selectedFilter !== "All" ? selectedFilter : "Today"}
-          </div>
         </div>
 
-        {/* Filter Tabs */}
-        <div className="flex gap-3">
-          {filters.map((filter, index) => (
-            <button
-              key={index}
-              className={`px-4 py-1 rounded-full text-sm font-medium transition-colors ${
-                selectedFilter === filter
-                  ? "bg-orange-500 text-white"
-                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-              }`}
-              onClick={() => filterClasses(filter)}
-            >
-              {filter}
-            </button>
-          ))}
-        </div>
+        <ListingFilterBar
+          searchValue={searchQuery}
+          searchPlaceholder="Search classes, instructors…"
+          onSearchChange={setSearchQuery}
+          dayOptions={DAY_CHIPS}
+          daySelected={selectedFilter}
+          onDaySelect={setSelectedFilter}
+          levelOptions={levelOptions}
+          levelSelected={levelFilter}
+          onLevelSelect={setLevelFilter}
+          typeOptions={typeOptions}
+          typeSelected={typeFilter}
+          onTypeSelect={setTypeFilter}
+          typeLabel="Format"
+          resultCount={filteredClasses.length}
+          resultNoun="class"
+          onClear={() => {
+            setSearchQuery("");
+            setSelectedFilter("All");
+            setLevelFilter("All");
+            setTypeFilter("All");
+          }}
+        />
 
-        {/* Online Classes Header */}
-        <div className="flex justify-between items-center">
-          <h3 className="text-lg font-semibold">Online Classes</h3>
-          <button className="text-orange-500 text-sm font-medium">
-            See All
-          </button>
-        </div>
+        <section className="space-y-3">
+          <SectionHeader
+            title="Online Classes"
+            showAction={filteredClasses.length > 6}
+            actionLabel={seeAll ? "Show less" : "See all"}
+            onAction={() => setSeeAll((v) => !v)}
+          />
 
-        {/* Class Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {loading ? (
-            <div className="col-span-3 text-center py-8">
-              Loading classes...
-            </div>
-          ) : error ? (
-            <div className="col-span-3 text-center text-red-500 py-8">
-              {error}
-            </div>
-          ) : filteredClasses.length === 0 ? (
-            <div className="col-span-3 text-center py-8">
-              No classes available for {selectedFilter.toLowerCase()}.
-            </div>
-          ) : (
-            filteredClasses.map((item, i) => (
-              <div
-                key={item._id || i}
-                className="rounded-xl border border-gray-200 overflow-hidden shadow-sm bg-white"
-              >
-                {/* Card Image */}
-                <div className="relative h-[150px] w-full">
-                  {/* <Image
-                    src={item.image || "/images/class1.svg"}
-                    alt={item.title || "Class Thumbnail"}
-                    layout="fill"
-                    objectFit="cover"
-                    className="rounded-t-xl"
-                  /> */}
-                  <Image
-                    src={item.image || "/images/class1.svg"}
-                    alt={item.title || "Class Thumbnail"}
-                    fill
-                    style={{ objectFit: "cover" }}
-                    className="rounded-t-xl"
-                  />
-                  {item.status === "live" && (
-                    <div className="absolute top-2 right-2 bg-red-500 text-white text-xs px-2 py-0.5 rounded-full">
-                      Live
-                    </div>
-                  )}
-                </div>
-                {/* Card Body */}
-                <div className="p-4 space-y-2">
-                  <h4 className="text-sm font-semibold">
-                    {item.title || "Untitled Class"}
-                  </h4>
-                  {/* Instructor */}
-                  <div className="flex items-center gap-2 text-xs text-gray-600">
-                    <Image
-                      src={item.teacher?.profileImage || "/images/logo.svg"}
-                      width={24}
-                      height={24}
-                      alt={item.teacher?.name || "Instructor"}
-                      className="rounded-full object-cover"
-                    />
-                    <span>with {item.teacher?.name || "Unknown"}</span>
-                  </div>
-                  {/* Details */}
-                  <div className="flex items-center gap-3 text-xs text-gray-500">
-                    <div className="flex items-center gap-1">
-                      <Clock size={14} />
-                      {item.schedule
-                        ? new Date(item.schedule).toLocaleString()
-                        : "No schedule"}
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <DollarSign size={14} />
-                      {item.type === "free" ? "Free" : "Paid"}
-                    </div>
-                  </div>
-                  {/* Bottom Row */}
-                  <div className="flex justify-between items-center text-xs">
-                    <div className="flex items-center text-gray-400 gap-1">
-                      <Users size={14} />
-                      {item.availableseats || 0} spots left
-                    </div>
-                    {/* <button className="bg-orange-500 text-white text-xs px-3 py-1 rounded-md hover:bg-orange-600 cursor-pointer">
-                      Join
-                    </button> */}
-                    <button
-                      onClick={() =>
-                        router.push(
-                          `/Homepage/Group/Details?classId=${item._id}&studentId=${studentId}`,
-                        )
-                      }
-                      className="bg-orange-500 text-white text-xs px-3 py-1 rounded-md hover:bg-orange-600"
-                    >
-                      View
-                    </button>
-                  </div>
-                </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            {loading ? (
+              [1, 2, 3].map((i) => (
+                <div
+                  key={i}
+                  className="h-[260px] rounded-xl bg-orange-50/60 animate-pulse"
+                />
+              ))
+            ) : error ? (
+              <div className="col-span-full">
+                <EmptyState
+                  message={error}
+                  actionLabel="Retry"
+                  onAction={() => window.location.reload()}
+                />
               </div>
-            ))
-          )}
-        </div>
-
-        {/* My Classes Section */}
-
-        <div className="bg-white rounded-xl p-6 shadow-sm space-y-4">
-          {/* Header */}
-          <div className="flex justify-between items-center">
-            <h3 className="text-md font-semibold">My Classes</h3>
-            <button className="text-sm text-orange-500 font-medium">
-              See All
-            </button>
+            ) : filteredClasses.length === 0 ? (
+              <div className="col-span-full">
+                <EmptyState
+                  message={`No classes available for ${selectedFilter.toLowerCase()}.`}
+                />
+              </div>
+            ) : (
+              visible.map((item, i) => {
+                const own = isOwnResource(user, item.teacher);
+                return (
+                  <article
+                    key={item._id || i}
+                    className="rounded-xl border border-orange-100/80 overflow-hidden bg-white shadow-sm hover:shadow-md transition-shadow"
+                  >
+                    <div className="relative h-[140px] w-full">
+                      <Image
+                        src={item.image || "/images/class1.svg"}
+                        alt={item.title || "Class Thumbnail"}
+                        fill
+                        className="object-cover"
+                        sizes="(max-width:768px) 100vw, 33vw"
+                      />
+                      {item.status === "live" ? (
+                        <span className="absolute top-2 right-2 bg-red-500 text-white text-[10px] font-semibold px-2 py-0.5 rounded-full">
+                          Live
+                        </span>
+                      ) : null}
+                    </div>
+                    <div className="p-3.5 space-y-2">
+                      <h4 className="text-sm font-semibold text-gray-900 line-clamp-2">
+                        {item.title || "Untitled Class"}
+                      </h4>
+                      <div className="flex items-center gap-2 text-xs text-gray-600">
+                        <LetterAvatar
+                          name={item.teacher?.name || "Instructor"}
+                          src={item.teacher?.profileImage}
+                          size={22}
+                        />
+                        <span className="truncate">
+                          with {item.teacher?.name || "Unknown"}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-3 text-xs text-gray-500">
+                        <span className="inline-flex items-center gap-1">
+                          <Clock size={13} aria-hidden />
+                          {formatDisplayDateTime(
+                            item.schedule || item.startDate,
+                            "No schedule",
+                          )}
+                        </span>
+                        <span className="inline-flex items-center gap-1">
+                          <DollarSign size={13} aria-hidden />
+                          {item.type === "free" ? "Free" : "Paid"}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center pt-1">
+                        <span className="inline-flex items-center gap-1 text-xs text-gray-400">
+                          <Users size={13} aria-hidden />
+                          {item.availableseats || 0} spots
+                        </span>
+                        {own ? (
+                          <span className="text-xs font-medium text-orange-600 px-2 py-1.5">
+                            Host
+                          </span>
+                        ) : null}
+                        <button
+                          type="button"
+                          aria-label={`View ${item.title || "class"}`}
+                          onClick={() =>
+                            router.push(
+                              `/Homepage/Group/Details?classId=${item._id}&studentId=${studentId}`,
+                            )
+                          }
+                          className="bg-[#ed662e] text-white text-xs font-medium px-3 py-1.5 rounded-md hover:bg-[#c95520] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#ed662e]/40"
+                        >
+                          View
+                        </button>
+                      </div>
+                    </div>
+                  </article>
+                );
+              })
+            )}
           </div>
+        </section>
 
-          {/* Class List */}
+        <section className="rounded-xl border border-[#ffe0d0] bg-[#fff4ef]/50 p-4 space-y-3">
+          <SectionHeader title="My Classes" showAction={false} />
           {myClasses.length === 0 ? (
-            <p className="text-sm text-gray-500">No enrolled classes yet.</p>
+            <EmptyState
+              message="No enrolled classes yet."
+              actionLabel="Browse classes"
+              onAction={() => setSelectedFilter("All")}
+            />
           ) : (
-            myClasses.map((classItem: ClassType, index: number) => (
-              <div
-                key={classItem._id || index}
-                className="flex justify-between items-center bg-gray-50 rounded-lg px-4 py-3"
-              >
-                <div className="flex gap-3 items-center">
-                  <Image
-                    src={classItem.image || "/images/class1.svg"}
-                    alt={classItem.title || "Class Thumbnail"}
-                    width={48}
-                    height={48}
-                    className="rounded-lg object-cover"
-                  />
-                  <div>
-                    <h4 className="text-sm font-medium">
-                      {classItem.title || "Class"}
-                    </h4>
-                    <p className="text-xs text-gray-500">
-                      {classItem.startDate
-                        ? new Date(classItem.startDate).toLocaleString()
-                        : "No date"}
-                    </p>
-                  </div>
-                </div>
-
-                <button
-                  onClick={() =>
-                    router.push(
-                      `/Homepage/Group/Details?classId=${classItem._id}&studentId=${studentId}`,
-                    )
-                  }
-                  className="text-sm border px-3 py-1 rounded-md text-gray-700 hover:bg-gray-100"
+            <ul className="space-y-2">
+              {myClasses.map((classItem, index) => (
+                <li
+                  key={classItem._id || index}
+                  className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 bg-white rounded-lg border border-orange-50 px-3 py-2.5"
                 >
-                  View Details →
-                </button>
-              </div>
-            ))
+                  <div className="flex gap-3 items-center min-w-0">
+                    <Image
+                      src={classItem.image || "/images/class1.svg"}
+                      alt={classItem.title || "Class Thumbnail"}
+                      width={44}
+                      height={44}
+                      className="rounded-lg object-cover w-11 h-11 shrink-0"
+                    />
+                    <div className="min-w-0">
+                      <h4 className="text-sm font-medium text-gray-900 truncate">
+                        {classItem.title || "Class"}
+                      </h4>
+                      <p className="text-xs text-gray-500">
+                        {formatDisplayDateTime(classItem.startDate, "No date")}
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      router.push(
+                        `/Homepage/Group/Details?classId=${classItem._id}&studentId=${studentId}`,
+                      )
+                    }
+                    className="text-sm border border-gray-200 px-3 py-1.5 rounded-md text-gray-700 hover:bg-gray-50 transition-colors shrink-0"
+                  >
+                    Details
+                  </button>
+                </li>
+              ))}
+            </ul>
           )}
-        </div>
+        </section>
       </div>
     </div>
   );

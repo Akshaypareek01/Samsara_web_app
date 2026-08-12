@@ -7,41 +7,69 @@ import {
   Menu,
   Calendar,
   Crown,
-  // Activity,
-  Bell,
-  Search,
   CalendarDays,
   Users,
-  House,
-  // User,
+  X,
+  LogOut,
+  User,
 } from "lucide-react";
-
 import { useRouter, usePathname } from "next/navigation";
 import Cookies from "js-cookie";
 import { BASE_URL } from "@/lib/utils";
+import LetterAvatar from "@/components/LetterAvatar";
+
+const PORTAL_ORANGE = "#ed662e";
 
 type UserProfile = {
   name: string;
   email: string;
   profileImage?: string;
   images?: { path: string }[];
-  role: string; // Added role field
+  role: string;
 };
 
+/**
+ * Resolves avatar URL from profile fields (empty when missing).
+ * @param user - Logged-in user profile
+ */
+function getAvatarUrl(user: UserProfile): string | undefined {
+  if (user.profileImage) return user.profileImage;
+  const images = user.images;
+  if (images && images.length > 0) {
+    return images[images.length - 1]?.path;
+  }
+  return undefined;
+}
+
+/**
+ * Role label for sidebar / header user chip.
+ * @param role - API role string
+ */
+function roleLabel(role?: string): string {
+  if (role === "teacher") return "Teacher";
+  return "Member";
+}
+
+/**
+ * Homepage shell — company-portal style orange sidebar + white header canvas.
+ */
 export default function Layout({ children }: { children: React.ReactNode }) {
   const [isSidebarOpen, setSidebarOpen] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
 
-  // User state
   const [user, setUser] = useState<UserProfile | null>(null);
   const [loadingUser, setLoadingUser] = useState(true);
 
   useEffect(() => {
+    /**
+     * Loads the signed-in user profile; redirects when unauthenticated.
+     */
     const fetchUser = async () => {
       const token = Cookies.get("accessToken");
       if (!token) {
         setLoadingUser(false);
+        router.replace("/");
         return;
       }
       try {
@@ -51,262 +79,231 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           },
         });
         if (!res.ok) {
+          Cookies.remove("accessToken");
+          Cookies.remove("user");
           setLoadingUser(false);
+          router.replace("/");
           return;
         }
         const data = await res.json();
-        setUser(data);
+        setUser(data.data || data);
       } catch {
-        // ignore
+        router.replace("/");
       } finally {
         setLoadingUser(false);
       }
     };
     fetchUser();
-  }, []);
-  return (
-    <div className="h-screen flex flex-col md:flex-row bg-[#fdf4f2]">
-      {/* Mobile Top Bar */}
-      <div className="flex md:hidden items-center justify-between p-3 bg-[#fdf4f2]">
-        <div className="flex items-center gap-2">
-          <Image src="/images/logo.svg" alt="Logo" width={30} height={30} />
-          <span className="font-semibold text-gray-700 text-[15px]">
-            SAMSARA
-          </span>
-        </div>
-        <button onClick={() => setSidebarOpen(!isSidebarOpen)}>
-          <Menu size={24} />
-        </button>
-      </div>
+  }, [router]);
 
-      {/* Sidebar */}
+  /**
+   * Clears auth cookies and returns to login.
+   */
+  const handleLogout = () => {
+    Cookies.remove("accessToken");
+    Cookies.remove("user");
+    router.push("/");
+  };
+
+  /**
+   * Navigates and closes the mobile drawer.
+   * @param href - Target path
+   */
+  const navigate = (href: string) => {
+    setSidebarOpen(false);
+    router.push(href);
+  };
+
+  if (loadingUser) {
+    return (
+      <div className="h-screen flex items-center justify-center bg-[#f3f4f6]">
+        <div
+          className="w-10 h-10 rounded-full border-2 border-[#ed662e] border-t-transparent animate-spin"
+          aria-label="Loading"
+        />
+      </div>
+    );
+  }
+
+  if (!user) {
+    return null;
+  }
+
+  const avatarSrc = getAvatarUrl(user);
+  const role = roleLabel(user.role);
+
+  return (
+    <div className="h-screen flex bg-[#f3f4f6]" style={{ ["--portal-primary" as string]: PORTAL_ORANGE }}>
+      {/* Mobile overlay */}
+      {isSidebarOpen ? (
+        <div
+          className="fixed inset-0 bg-black/50 z-30 md:hidden"
+          onClick={() => setSidebarOpen(false)}
+          aria-hidden="true"
+        />
+      ) : null}
+
+      {/* Orange sidebar */}
       <aside
         className={`${
           isSidebarOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
-        } fixed md:static w-64 p-6 bg-[#fdf4f2] z-10 h-full transition-transform duration-300 ease-in-out md:block`}
+        } fixed md:static inset-y-0 left-0 z-40 w-60 flex flex-col bg-[#ed662e] text-white shadow-[4px_0_24px_rgba(237,102,46,0.15)] transition-transform duration-300 ease-in-out`}
+        aria-label="Main navigation"
       >
-        <div className="flex flex-col items-start gap-2 pl-2">
-          {loadingUser ? (
-            <div className="w-20 h-20 rounded-full bg-gray-200 animate-pulse" />
-          ) : user ? (
-            <>
-              <Image
-                src={user.profileImage || "/images/logo.svg"}
-                width={80}
-                height={80}
-                className="rounded-full object-cover"
-                alt={user.name || "Profile"}
-              />
-              <h2 className="font-semibold text-[16px]">{user.name}</h2>
-              <p className="text-gray-500 text-sm">{user.email}</p>
-              <button
-                className="bg-gray-500 text-white px-3 py-1 rounded-md text-xs hover:bg-gray-600 transition mt-2"
-                onClick={() => {
-                  Cookies.remove("accessToken");
-                  Cookies.remove("user");
-                  router.push("/");
-                }}
-              >
-                Logout
-              </button>
-            </>
-          ) : (
-            <>
-              <Image
-                src="/images/logo.svg"
-                width={80}
-                height={80}
-                className="rounded-full object-cover"
-                alt="Profile"
-              />
-              <h2 className="font-semibold text-[16px]">Guest</h2>
-              <p className="text-gray-500 text-sm">Not signed in</p>
-            </>
-          )}
+        <div className="flex items-center justify-between gap-2 px-4 py-5 border-b border-white/15">
+          <div className="flex items-center gap-2 min-w-0">
+            <Image
+              src="/images/logo.svg"
+              alt="Samsara"
+              width={36}
+              height={36}
+              className="brightness-0 invert shrink-0"
+            />
+            <div className="min-w-0">
+              <p className="text-sm font-bold tracking-wide uppercase truncate">
+                Samsara
+              </p>
+              <p className="text-[10px] text-white/65 uppercase tracking-wider">
+                Wellness
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            className="md:hidden inline-flex items-center justify-center w-8 h-8 rounded-lg bg-white/12 hover:bg-white/20 transition"
+            aria-label="Close sidebar"
+            onClick={() => setSidebarOpen(false)}
+          >
+            <X size={18} aria-hidden />
+          </button>
         </div>
 
-        {/* Navigation */}
-        <nav className="mt-10 space-y-3 text-gray-700 text-sm">
-          {user && user.role === "teacher" && (
+        <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-1" aria-label="Primary">
+          {/* Teacher-only: schedule first */}
+          {user.role === "teacher" ? (
             <MenuItem
-              icon={<Calendar size={18} />}
-              label="Scheduled Classes"
+              icon={<Calendar size={18} aria-hidden />}
+              label="My Scheduled Classes"
               isActive={pathname === "/Homepage/Classes/Scheduled"}
-              onClick={() => router.push("/Homepage/Classes/Scheduled")}
+              onClick={() => navigate("/Homepage/Classes/Scheduled")}
             />
-          )}
+          ) : null}
 
           <MenuItem
-            icon={<House size={18} />}
-            label="Home"
-            isActive={pathname.startsWith("/Homepage")}
-            onClick={() => router.push("/Homepage")}
-          />
-
-          <MenuItem
-            icon={<Calendar size={18} />}
-            label="Profile"
-            isActive={pathname === "/Homepage/Dashboard/UserProfile"}
-            onClick={() => router.push("/Homepage/Dashboard/UserProfile")}
-          />
-
-          {/* <MenuItem
-  icon={<BookOpen size={18} />}
-  label="Profile"
-  isActive={pathname.startsWith("/Homepage/Profile")}
-  onClick={() => router.push("/Homepage/Profile")}
-/> */}
-          <MenuItem
-            icon={<BookOpen size={18} />}
+            icon={<BookOpen size={18} aria-hidden />}
             label="My Classes"
             isActive={pathname === "/Homepage/Classes"}
-            onClick={() => router.push("/Homepage/Classes")}
+            onClick={() => navigate("/Homepage/Classes")}
           />
 
           <MenuItem
-            icon={<Users size={18} />}
+            icon={<Users size={18} aria-hidden />}
             label="Group Classes"
             isActive={pathname.startsWith("/Homepage/Group")}
-            onClick={() => router.push("/Homepage/Group")}
+            onClick={() => navigate("/Homepage/Group")}
           />
 
           <MenuItem
-            icon={<CalendarDays size={18} />}
+            icon={<CalendarDays size={18} aria-hidden />}
             label="Events"
             isActive={pathname.startsWith("/Homepage/Events")}
-            onClick={() => router.push("/Homepage/Events")}
+            onClick={() => navigate("/Homepage/Events")}
           />
 
-          {/* <MenuItem
-            icon={<User size={18} />}
-            label="1:1 Classes"
-            isActive={pathname.startsWith("/Homepage/onetoone")}
-            onClick={() => router.push("/Homepage/onetoone")}
-          /> */}
-
           <MenuItem
-            icon={<Crown size={18} />}
+            icon={<Crown size={18} aria-hidden />}
             label="Membership"
             isActive={pathname.startsWith("/Homepage/Membership")}
-            onClick={() => router.push("/Homepage/Membership")}
+            onClick={() => navigate("/Homepage/Membership")}
           />
 
-          {/* <MenuItem
-            icon={<Activity size={18} />}
-            label="My Body"
-            isActive={pathname.startsWith("/Homepage/Mybody")}
-            onClick={() => router.push("/Homepage/Mybody")}
-          /> */}
-
-          {/* <MenuItem
-            icon={<Calendar size={18} />}
-            label="Events"
-            isActive={pathname.startsWith("/Homepage/Events")}
-            onClick={() => router.push("/Homepage/Events")}
-          />
           <MenuItem
-            icon={<Users size={18} />}
-            label="Group Classes"
-            isActive={pathname.startsWith("/Homepage/Group")}
-            onClick={() => router.push("/Homepage/Group")}
+            icon={<User size={18} aria-hidden />}
+            label="Profile"
+            isActive={pathname === "/Homepage/Dashboard/UserProfile"}
+            onClick={() => navigate("/Homepage/Dashboard/UserProfile")}
           />
-          <MenuItem
-            icon={<User2 size={18} />}
-            label="1:1 Classes"
-            isActive={pathname === "/Homepage/onetoone"}
-            onClick={() => router.push("/Homepage/onetoone")}
-          />
-          <MenuItem
-            icon={<Activity size={18} />}
-            label="My Body"
-            isActive={pathname === "/Homepage/Mybody"}
-            onClick={() => router.push("/Homepage/Mybody")}
-          />
-          <MenuItem
-            icon={<Activity size={18} />}
-            label="Tracker"
-            isActive={pathname === "/Homepage/Tracker"}
-            onClick={() => router.push("/Homepage/Tracker")}
-          /> */}
         </nav>
+
+        <div className="px-3 pb-4 pt-2 border-t border-white/15">
+          <button
+            type="button"
+            onClick={() => navigate("/Homepage/Dashboard/UserProfile")}
+            className="flex w-full items-center gap-3 rounded-xl px-2.5 py-2.5 bg-white/10 hover:bg-white/15 transition text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
+            aria-label={`${user.name}, ${role}. Open profile`}
+          >
+            <LetterAvatar
+              name={user.name}
+              src={avatarSrc}
+              size={40}
+              className="ring-2 ring-white/40"
+            />
+            <span className="min-w-0 flex-1">
+              <span className="block text-sm font-semibold text-white truncate">
+                {user.name}
+              </span>
+              <span className="block text-xs text-white/70 truncate">{role}</span>
+            </span>
+          </button>
+        </div>
       </aside>
 
-      {/* Mobile overlay */}
-      {isSidebarOpen && (
-        <div
-          className="fixed inset-0 bg-black bg-opacity-50 z-0 md:hidden"
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
+      {/* Main column */}
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+        <header
+          className="h-16 shrink-0 bg-white border-b border-gray-200 flex items-center gap-3 px-4 sm:px-6 sticky top-0 z-20"
+          role="banner"
+        >
+          <button
+            type="button"
+            className="md:hidden inline-flex items-center justify-center w-10 h-10 rounded-lg text-gray-700 hover:bg-gray-100 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-[#ed662e]/40"
+            aria-label="Toggle navigation menu"
+            onClick={() => setSidebarOpen(true)}
+          >
+            <Menu size={22} aria-hidden />
+          </button>
 
-      {/* Main Content */}
-      <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Top bar */}
-        {/* Top bar */}
-        <div className="hidden md:flex items-center justify-between px-6 py-4 bg-[#fdf4f2] sticky top-0 z-20">
-          {/* Search */}
-          <div className="relative w-full max-w-xl">
-            <Search
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
-              size={18}
-            />
-            <input
-              type="text"
-              placeholder="Search..."
-              className="w-full pl-10 pr-4 py-2 rounded-full bg-white border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
-            />
-          </div>
+          <div className="flex-1 min-w-0" aria-hidden="true" />
 
-          {/* Right Side Icons */}
-          <div className="flex items-center gap-4 ml-6">
-            {/* Notification */}
-            <div className="relative cursor-pointer">
-              <Bell size={20} className="text-gray-600 hover:text-orange-500" />
-              <span className="absolute -top-1 -right-1 bg-orange-500 text-white text-[10px] w-4 h-4 flex items-center justify-center rounded-full">
-                2
-              </span>
-            </div>
-
-            {/* Dashboard / Profile Button */}
-            {/* <button
-              className="bg-[#EB855F] text-white px-4 py-2 rounded-md text-sm hover:bg-orange-500 transition"
-              onClick={() => router.push("/Homepage/Dashboard")}
-            >
-              Dashboard
-            </button> */}
-          </div>
-        </div>
-        {/* <div className="hidden md:flex items-center justify-between px-6 py-3 bg-[#fdf4f2] mt-8"> */}
-        {/* <div className="relative w-full max-w-md">
-            <Search
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
-              size={18}
-            />
-            <input
-              type="text"
-              placeholder="Search..."
-              className="w-2xl pl-10 pr-4 py-2 rounded-full bg-white border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
-            />
-          </div>
-          <div className="flex items-center gap-4 ml-4">
+          <div className="flex items-center gap-3 shrink-0">
             <button
-              className="bg-[#EB855F] text-white px-4 py-2 rounded-md text-sm hover:bg-orange-500 transition"
-              onClick={() => router.push("/Homepage/Dashboard")}
+              type="button"
+              onClick={() => navigate("/Homepage/Dashboard/UserProfile")}
+              className="hidden sm:inline-flex items-center gap-2.5 rounded-full py-1 pl-1 pr-3 hover:bg-[#fff4ef] transition focus:outline-none focus-visible:ring-2 focus-visible:ring-[#ed662e]/40"
+              aria-label={`${user.name}, ${role}. View profile`}
             >
-              Dashboard
+              <LetterAvatar name={user.name} src={avatarSrc} size={40} />
+              <span className="flex flex-col items-start leading-tight min-w-0">
+                <span className="text-[13px] font-semibold text-gray-900 truncate max-w-[10rem]">
+                  {user.name}
+                </span>
+                <span className="text-[11px] text-gray-500">{role}</span>
+              </span>
             </button>
-          </div> */}
-        {/* </div> */}
 
-        {/* Scrollable content */}
-        <div className="flex-1 overflow-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+            <button
+              type="button"
+              onClick={handleLogout}
+              aria-label="Log out"
+              className="inline-flex items-center justify-center gap-1.5 h-10 px-4 rounded-lg bg-[#ed662e] text-white text-[13px] font-semibold hover:bg-[#c95520] transition shadow-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-[#ed662e]/40 focus-visible:ring-offset-2"
+            >
+              <LogOut size={16} aria-hidden />
+              <span>Logout</span>
+            </button>
+          </div>
+        </header>
+
+        <main className="flex-1 overflow-auto bg-[#f3f4f6] [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
           {children}
-        </div>
+        </main>
       </div>
     </div>
   );
 }
 
+/**
+ * Sidebar nav row — white icons/text; active = white pill + orange text.
+ */
 function MenuItem({
   icon,
   label,
@@ -319,16 +316,19 @@ function MenuItem({
   isActive?: boolean;
 }) {
   return (
-    <div
+    <button
+      type="button"
       onClick={onClick}
-      className={`flex items-center gap-3 px-2 py-2 cursor-pointer rounded-md transition ${
+      className={`flex w-full items-center gap-3 px-3 py-2.5 cursor-pointer rounded-xl transition text-left min-h-[44px] text-[13px] font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50 ${
         isActive
-          ? "bg-white text-orange-600 font-semibold"
-          : "text-gray-700 hover:text-black"
+          ? "bg-white text-[#ed662e] shadow-sm"
+          : "text-white/88 hover:bg-white/12"
       }`}
     >
-      {icon}
+      <span className={isActive ? "text-[#ed662e]" : "text-white/90"} aria-hidden>
+        {icon}
+      </span>
       <span>{label}</span>
-    </div>
+    </button>
   );
 }

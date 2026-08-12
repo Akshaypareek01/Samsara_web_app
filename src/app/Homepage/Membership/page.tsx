@@ -7,15 +7,19 @@ import toast from 'react-hot-toast';
 import Cookies from 'js-cookie';
 import MembershipApiService, { Plan, Membership } from '@/lib/membershipApiService';
 import { hasUserHadTrialPlan, filterTrialPlansForUser, isTrialPlan } from '@/lib/trialPlanUtils';
+import { getUserId as resolveUserId } from '@/lib/userId';
 import { Check, Crown, Sparkles } from 'lucide-react';
+import EmptyState from '@/components/EmptyState';
+import { formatDisplayDate } from '@/lib/formatDisplayDate';
 
-// Helper to get user ID from cookies
-const getUserId = (): string | null => {
+/**
+ * Reads user id from the auth cookie.
+ */
+const getUserIdFromCookie = (): string | null => {
   try {
     const userStr = Cookies.get('user');
     if (userStr) {
-      const user = JSON.parse(userStr);
-      return user._id || user.id || null;
+      return resolveUserId(JSON.parse(userStr));
     }
   } catch (e) {
     console.error('Error parsing user cookie:', e);
@@ -39,7 +43,7 @@ export default function MembershipPage() {
       setLoading(true);
 
       // Check if user has had a trial plan before
-      const userId = getUserId();
+      const userId = getUserIdFromCookie();
       let hasHadTrial = false;
       if (userId) {
         hasHadTrial = await hasUserHadTrialPlan(userId);
@@ -93,62 +97,57 @@ export default function MembershipPage() {
     return (
       <div
         key={planId}
-        className={`relative bg-white rounded-2xl shadow-lg overflow-hidden transition-all duration-300 hover:shadow-xl ${
-          isActive ? 'ring-2 ring-green-500' : ''
+        className={`relative bg-white rounded-xl border border-orange-100/80 shadow-sm overflow-hidden transition-shadow hover:shadow-md ${
+          isActive ? 'ring-2 ring-orange-400' : ''
         }`}
       >
-        {isActive && (
-          <div className="absolute top-0 right-4 bg-green-500 text-white px-4 py-1 rounded-b-lg text-xs font-bold z-10">
+        {isActive ? (
+          <div className="absolute top-0 right-3 bg-orange-500 text-white px-2.5 py-0.5 rounded-b-md text-[10px] font-bold z-10 tracking-wide">
             ACTIVE
           </div>
-        )}
+        ) : null}
 
-        {/* Header */}
-        <div className="bg-gradient-to-r from-orange-500 to-orange-600 px-6 py-6">
+        <div className="bg-[#ed662e] px-4 py-4">
           <div className="flex items-center justify-center gap-2">
-            {isTrial && <Sparkles className="w-5 h-5 text-yellow-300" />}
-            {!isTrial && <Crown className="w-5 h-5 text-yellow-300" />}
-            <h3 className="text-2xl font-bold text-white text-center uppercase">{plan.name}</h3>
+            {isTrial ? <Sparkles className="w-4 h-4 text-white/90" aria-hidden /> : <Crown className="w-4 h-4 text-white/90" aria-hidden />}
+            <h3 className="text-lg font-semibold text-white text-center uppercase tracking-wide">{plan.name}</h3>
           </div>
         </div>
 
-        {/* Price */}
-        <div className="bg-yellow-200 px-6 py-8 flex items-center justify-center gap-1">
-          <span className="text-lg text-black mt-[-10px]">₹</span>
-          <span className="text-4xl font-semibold text-black">{plan.basePrice}</span>
-          <span className="text-lg text-black mt-[10px]">/{plan.validityDays} days</span>
+        <div className="bg-[#fff4ef] px-4 py-5 flex items-baseline justify-center gap-1">
+          <span className="text-sm text-gray-700">₹</span>
+          <span className="text-3xl font-semibold text-gray-900">{plan.basePrice}</span>
+          <span className="text-sm text-gray-600">/{plan.validityDays} days</span>
         </div>
 
-        {/* Description */}
-        <div className="px-6 py-6">
-          <p className="text-gray-600 text-lg mb-6">{plan.description}</p>
+        <div className="px-4 py-4">
+          <p className="text-gray-600 text-sm mb-4 line-clamp-3">{plan.description}</p>
 
-          {/* Features */}
-          {plan.features && plan.features.length > 0 && (
-            <div className="mb-6">
-              <h4 className="text-gray-800 font-bold text-lg mb-4">Features:</h4>
-              <ul className="space-y-2">
+          {plan.features && plan.features.length > 0 ? (
+            <div className="mb-4">
+              <h4 className="text-gray-800 font-semibold text-sm mb-2">Includes</h4>
+              <ul className="space-y-1.5">
                 {plan.features.map((feature, index) => (
-                  <li key={index} className="flex items-start gap-2 text-gray-600">
-                    <Check className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" />
+                  <li key={index} className="flex items-start gap-2 text-sm text-gray-600">
+                    <Check className="w-4 h-4 text-orange-500 flex-shrink-0 mt-0.5" aria-hidden />
                     <span>{feature}</span>
                   </li>
                 ))}
               </ul>
             </div>
-          )}
+          ) : null}
 
-          {/* Button */}
           <button
+            type="button"
             onClick={() => handleSelectPlan(plan)}
             disabled={isActive}
-            className={`w-full py-4 rounded-xl font-bold text-lg transition-all duration-200 ${
+            className={`w-full py-2.5 rounded-lg text-sm font-semibold transition-colors min-h-[44px] ${
               isActive
-                ? 'bg-gray-400 text-gray-600 cursor-not-allowed'
-                : 'bg-orange-500 text-white hover:bg-orange-600 active:scale-95'
+                ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                : 'bg-orange-500 text-white hover:bg-orange-600'
             }`}
           >
-            {isActive ? 'Current Plan' : 'Get Plan'}
+            {isActive ? 'Current plan' : 'Get plan'}
           </button>
         </div>
       </div>
@@ -159,44 +158,46 @@ export default function MembershipPage() {
     if (!activeMembership) return null;
 
     return (
-      <div className="mb-8">
-        <h2 className="text-2xl font-bold text-gray-800 mb-4">Your Active Membership</h2>
-        <div className="bg-green-50 border-2 border-green-500 rounded-xl p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-xl font-bold text-gray-800">{activeMembership.planName}</h3>
-            <span className="bg-green-500 text-white px-3 py-1 rounded-lg text-xs font-bold">
+      <div className="mb-6">
+        <h2 className="text-base font-semibold text-gray-900 mb-3">Your active membership</h2>
+        <div className="rounded-xl border border-[#ffe0d0] bg-[#fff4ef]/70 p-4">
+          <div className="flex items-center justify-between gap-3 mb-3">
+            <h3 className="text-base font-semibold text-gray-900">{activeMembership.planName}</h3>
+            <span className="bg-[#ed662e] text-white px-2.5 py-0.5 rounded-md text-[10px] font-bold tracking-wide">
               {activeMembership.status.toUpperCase()}
             </span>
           </div>
 
-          <div className="grid grid-cols-2 gap-4 mb-4">
+          <div className="grid grid-cols-2 gap-3 mb-4 text-sm">
             <div>
-              <p className="text-gray-600 text-sm">Start Date</p>
-              <p className="font-semibold text-gray-800">
-                {new Date(activeMembership.startDate).toLocaleDateString()}
+              <p className="text-gray-500 text-xs">Start</p>
+              <p className="font-medium text-gray-800">
+                {formatDisplayDate(activeMembership.startDate, {
+                  fallback: "—",
+                })}
               </p>
             </div>
             <div>
-              <p className="text-gray-600 text-sm">End Date</p>
-              <p className="font-semibold text-gray-800">
-                {new Date(activeMembership.endDate).toLocaleDateString()}
+              <p className="text-gray-500 text-xs">End</p>
+              <p className="font-medium text-gray-800">
+                {formatDisplayDate(activeMembership.endDate, { fallback: "—" })}
               </p>
             </div>
             <div>
-              <p className="text-gray-600 text-sm">Days Remaining</p>
-              <p className="font-semibold text-gray-800">{activeMembership.daysRemaining} days</p>
+              <p className="text-gray-500 text-xs">Days left</p>
+              <p className="font-medium text-gray-800">{activeMembership.daysRemaining}</p>
             </div>
             <div>
-              <p className="text-gray-600 text-sm">Amount Paid</p>
-              <p className="font-semibold text-gray-800">₹{activeMembership.amountPaid}</p>
+              <p className="text-gray-500 text-xs">Paid</p>
+              <p className="font-medium text-gray-800">₹{activeMembership.amountPaid}</p>
             </div>
           </div>
 
           <Link
             href="/Homepage/Membership/history"
-            className="block w-full bg-green-500 text-white text-center py-3 rounded-lg font-semibold hover:bg-green-600 transition-colors"
+            className="block w-full bg-white border border-orange-200 text-orange-600 text-center py-2.5 rounded-lg text-sm font-semibold hover:bg-orange-50 transition-colors"
           >
-            View History
+            View history
           </Link>
         </div>
       </div>
@@ -205,62 +206,50 @@ export default function MembershipPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="px-4 sm:px-6 py-16 max-w-6xl mx-auto flex justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading membership plans...</p>
+          <div className="animate-spin rounded-full h-8 w-8 border-2 border-orange-500 border-t-transparent mx-auto mb-3" aria-label="Loading" />
+          <p className="text-sm text-gray-500">Loading membership plans…</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8 px-4">
-      <div className="max-w-6xl mx-auto">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold text-gray-800 mb-2">Membership Plans</h1>
-          <p className="text-gray-600 text-lg">Choose the perfect plan for your wellness journey</p>
-        </div>
+    <div className="px-4 sm:px-6 py-6 max-w-6xl mx-auto w-full">
+      <div className="mb-5">
+        <h1 className="text-xl sm:text-2xl font-semibold text-gray-900">Membership</h1>
+        <p className="text-sm text-gray-500 mt-0.5">Choose a plan to unlock classes and events</p>
+      </div>
 
-        {renderActiveMembership()}
+      {renderActiveMembership()}
 
-        {/* Plans Grid */}
-        <div className="mb-8">
-          <h2 className="text-2xl font-bold text-gray-800 mb-6">Available Plans</h2>
-          {plans.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {plans.filter((p): p is Plan => p != null && (p._id != null || p.id != null)).map(renderPlanCard)}
-            </div>
-          ) : (
-            <div className="bg-white rounded-xl p-8 text-center">
-              <p className="text-gray-600 text-lg">No membership plans available at the moment.</p>
-            </div>
-          )}
-        </div>
+      <div className="mb-6">
+        <h2 className="text-base font-semibold text-gray-900 mb-3">Available plans</h2>
+        {plans.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            {plans.filter((p): p is Plan => p != null && (p._id != null || p.id != null)).map(renderPlanCard)}
+          </div>
+        ) : (
+          <EmptyState message="No membership plans available at the moment." />
+        )}
+      </div>
 
-        {/* Info Section */}
-        <div className="bg-white rounded-xl p-6 shadow-md">
-          <h3 className="text-xl font-bold text-gray-800 mb-4">Why Choose Samsara?</h3>
-          <ul className="space-y-2">
-            <li className="flex items-start gap-2 text-gray-600">
-              <Check className="w-5 h-5 text-orange-500 flex-shrink-0 mt-0.5" />
-              <span>Expert-led yoga and wellness classes</span>
+      <div className="rounded-xl border border-orange-100/80 bg-white p-4 shadow-sm">
+        <h3 className="text-sm font-semibold text-gray-900 mb-3">Why Samsara</h3>
+        <ul className="grid sm:grid-cols-2 gap-2">
+          {[
+            'Expert-led yoga and wellness classes',
+            'Personalized health tracking',
+            'Community support and guidance',
+            'Flexible membership options',
+          ].map((item) => (
+            <li key={item} className="flex items-start gap-2 text-sm text-gray-600">
+              <Check className="w-4 h-4 text-orange-500 flex-shrink-0 mt-0.5" aria-hidden />
+              <span>{item}</span>
             </li>
-            <li className="flex items-start gap-2 text-gray-600">
-              <Check className="w-5 h-5 text-orange-500 flex-shrink-0 mt-0.5" />
-              <span>Personalized health tracking and insights</span>
-            </li>
-            <li className="flex items-start gap-2 text-gray-600">
-              <Check className="w-5 h-5 text-orange-500 flex-shrink-0 mt-0.5" />
-              <span>Community support and guidance</span>
-            </li>
-            <li className="flex items-start gap-2 text-gray-600">
-              <Check className="w-5 h-5 text-orange-500 flex-shrink-0 mt-0.5" />
-              <span>Flexible membership options</span>
-            </li>
-          </ul>
-        </div>
+          ))}
+        </ul>
       </div>
     </div>
   );

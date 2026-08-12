@@ -3,10 +3,11 @@
 import { useEffect, useState } from "react";
 import { getCookie } from "cookies-next";
 import { BASE_URL } from "@/lib/utils";
+import { getUserId } from "@/lib/userId";
 import { useRouter } from "next/navigation";
 import axios from "axios";
-import Image from "next/image";
 import { ClassCard, EventCard, StatsSection, TabNavigation } from "./components";
+import EmptyState from "@/components/EmptyState";
 
 
 interface Attendance {
@@ -61,6 +62,8 @@ interface ClassData {
   whatYoullGain: string[];
   meeting_number?: string;
   password?: string;
+  zoomAccountUsed?: string;
+  zoomJoinUrl?: string;
   teacher: {
     _id: string;
     name: string;
@@ -98,6 +101,7 @@ interface EventData {
   status: boolean;
   meeting_number: string;
   password: string;
+  zoomAccountUsed?: string;
   teacher: {
     _id: string;
     name: string;
@@ -138,17 +142,21 @@ export default function MyClassesPage() {
 
 
   const attendedCount =
-    userProfile?.attendance?.filter(a => a.status === "attended").length || 0;
-
+    userProfile?.attendance?.filter((a) => a.status === "attended").length || 0;
 
   const totalHours =
     userProfile?.attendance?.reduce((acc, curr) => {
       const cls = allClasses.find(
-        c => String(c._id) === String(curr.classId)
+        (c) => String(c._id) === String(curr.classId),
       );
       return acc + (cls?.duration || 0);
     }, 0) || 0;
-  //---------------------------------
+
+  const hasAttendanceData =
+    (userProfile?.attendance?.length || 0) > 0 ||
+    attendedCount > 0 ||
+    totalHours > 0;
+
 
   // Get user's applied events
   const getUserAppliedEvents = async (userId: string) => {
@@ -191,12 +199,17 @@ export default function MyClassesPage() {
         }
 
         const profileData = await profileResponse.json();
-        setUserProfile(profileData);
+        const profile = (profileData?.data || profileData) as UserProfile;
+        setUserProfile(profile);
 
+        const userId = getUserId(profile);
+        if (!userId) {
+          throw new Error("User id missing from profile");
+        }
 
         // Fetch upcoming classes
         const allClassesResponse = await fetch(
-          `${BASE_URL}/classes/student/${profileData._id || profileData.id}/classes/upcoming`,
+          `${BASE_URL}/classes/student/${userId}/classes/upcoming`,
           {
             headers: {
               Authorization: `Bearer ${accessToken}`,
@@ -214,7 +227,7 @@ export default function MyClassesPage() {
 
         // Fetch user events
         try {
-          const eventsData = await getUserAppliedEvents(profileData.id) as { events?: EventData[] };
+          const eventsData = await getUserAppliedEvents(userId) as { events?: EventData[] };
           setUserEvents(eventsData.events || []);
         } catch (eventsError) {
           console.error('Error fetching events:', eventsError);
@@ -231,6 +244,11 @@ export default function MyClassesPage() {
   }, []);
 
   const handleJoinClass = async (classId: string) => {
+    if (!userProfile?.role) {
+      alert("Loading your profile — please try Join again in a moment.");
+      return;
+    }
+
     setJoiningClass(classId);
 
     try {
@@ -250,16 +268,19 @@ export default function MyClassesPage() {
         return;
       }
 
-      // Create Zoom meeting URL
+      // My Classes is student-only — always Meeting SDK attendee (role 0, no ZAK)
       const ZoomMeetingNumber = {
         number: classData.meeting_number,
         pass: classData.password || "",
         userName: userProfile?.name || "User",
         email: userProfile?.email || "",
         classId: classData._id || "",
+        role: 0,
+        appRole: "user",
+        account: classData.zoomAccountUsed,
       };
 
-      console.log("Data ===>", ZoomMeetingNumber);
+      console.log("Data ===>", { ...ZoomMeetingNumber, pass: "***" });
 
       const zoomMeetingNumberString = JSON.stringify(ZoomMeetingNumber);
 
@@ -294,13 +315,14 @@ export default function MyClassesPage() {
         return;
       }
 
-      // Create Zoom meeting URL
       const ZoomMeetingNumber = {
         number: eventData.meeting_number,
         pass: eventData.password || "",
         userName: userProfile?.name || "User",
         email: userProfile?.email || "",
         eventId: eventData._id || "",
+        role: 0,
+        account: eventData.zoomAccountUsed,
       };
 
       console.log("Event Data ===>", ZoomMeetingNumber);
@@ -355,128 +377,89 @@ export default function MyClassesPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="px-4 py-6 sm:px-6 lg:px-8 max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="mb-6 sm:mb-8">
-          <h1 className="text-xl sm:text-2xl lg:text-3xl font-semibold text-gray-900 mb-2">
+    <div className="px-4 sm:px-6 py-6 max-w-6xl mx-auto w-full">
+      <div className="mb-5 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
+        <div>
+          <h1 className="text-xl sm:text-2xl font-semibold text-gray-900">
             My Classes
           </h1>
-          <p className="text-sm sm:text-base text-gray-600">
+          <p className="text-sm text-gray-500 mt-0.5">
             Track your learning progress
           </p>
         </div>
+        <button
+          type="button"
+          onClick={() => router.push("/Homepage/Group")}
+          className="text-sm font-medium text-orange-500 hover:text-orange-600 transition-colors self-start sm:self-auto"
+        >
+          Browse group classes
+        </button>
+      </div>
 
-
-
+      {hasAttendanceData ? (
         <StatsSection
           classesCount={allClasses.length}
           eventsCount={userEvents.length}
           attendedCount={attendedCount}
           totalHours={totalHours}
         />
+      ) : null}
 
+      <div className={hasAttendanceData ? "mt-6" : ""}>
+        <TabNavigation
+          activeTab={activeTab}
+          onTabChange={setActiveTab}
+          classesCount={allClasses?.length || 0}
+          eventsCount={userEvents?.length || 0}
+        />
 
-        {/* Quick Access Cards */}
-        <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4 sm:gap-6">
-
-          {/* 1:1 Classes */}
-          <div
-            onClick={() => router.push("/Homepage/onetoone")}
-            className="cursor-pointer bg-white rounded-xl shadow-sm hover:shadow-md transition p-4 text-center"
-          >
-            <div className="relative w-full h-36 mb-4 rounded-lg overflow-hidden">
-              <Image
-                src="/images/room2.svg"
-                alt="1:1 Classes"
-                fill
-                className="object-cover"
+        {activeTab === "classes" && (
+          <>
+            {(allClasses?.length || 0) === 0 ? (
+              <EmptyState
+                message="No classes booked yet"
+                actionLabel="Browse group classes"
+                onAction={() => router.push("/Homepage/Group")}
               />
-            </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
+                {(allClasses || []).map((classItem, index) => (
+                  <ClassCard
+                    key={classItem._id || index}
+                    classItem={classItem}
+                    joiningClass={joiningClass}
+                    onJoinClass={handleJoinClass}
+                    onViewDetails={handleViewDetails}
+                  />
+                ))}
+              </div>
+            )}
+          </>
+        )}
 
-            <h3 className="font-semibold text-gray-800">1:1 Classes</h3>
-            <p className="text-sm text-gray-500">Private Sessions</p>
-          </div>
-
-          {/* Group Classes */}
-          <div
-            onClick={() => router.push("/Homepage/Group")}
-            className="cursor-pointer bg-white rounded-xl shadow-sm hover:shadow-md transition p-4 text-center"
-          >
-            <div className="relative w-full h-36 mb-4 rounded-lg overflow-hidden">
-              <Image
-                src="/images/room4.svg"
-                alt="Group Classes"
-                fill
-                className="object-cover"
+        {activeTab === "events" && (
+          <>
+            {(userEvents?.length || 0) === 0 ? (
+              <EmptyState
+                message="No events booked yet"
+                actionLabel="Browse events"
+                onAction={() => router.push("/Homepage/Events")}
               />
-            </div>
-
-            <h3 className="font-semibold text-gray-800">Group Classes</h3>
-            <p className="text-sm text-gray-500">Community Learning</p>
-          </div>
-
-        </div>
-
-        <div className="mt-8 sm:mt-12">
-          {/* Tab Navigation */}
-          <TabNavigation
-            activeTab={activeTab}
-            onTabChange={setActiveTab}
-            classesCount={allClasses?.length || 0}
-            eventsCount={userEvents?.length || 0}
-          />
-
-          {/* Classes Tab */}
-          {activeTab === 'classes' && (
-            <>
-              {(allClasses?.length || 0) === 0 ? (
-                <div className="text-center py-12 sm:py-16">
-                  <p className="text-gray-500 text-sm sm:text-base">No classes booked yet</p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6">
-                  {(allClasses || []).map((classItem, index) => (
-                    <ClassCard
-                      key={classItem._id || index}
-                      classItem={classItem}
-                      joiningClass={joiningClass}
-                      onJoinClass={handleJoinClass}
-                      onViewDetails={handleViewDetails}
-                    />
-                  ))}
-                </div>
-              )}
-            </>
-          )}
-
-          {/* Events Tab */}
-          {activeTab === 'events' && (
-            <>
-
-              {(userEvents?.length || 0) === 0 ? (
-                <div className="text-center py-12 sm:py-16">
-                  <p className="text-gray-500 text-sm sm:text-base">No events booked yet</p>
-                </div>
-              ) :
-
-
-                (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6">
-                    {(userEvents || []).map((eventItem, index) => (
-                      <EventCard
-                        key={eventItem._id || index}
-                        eventItem={eventItem}
-                        joiningEvent={joiningEvent}
-                        onJoinEvent={handleJoinEvent}
-                        onViewDetails={handleViewEventDetails}
-                      />
-                    ))}
-                  </div>
-                )}
-            </>
-          )}
-        </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
+                {(userEvents || []).map((eventItem, index) => (
+                  <EventCard
+                    key={eventItem._id || index}
+                    eventItem={eventItem}
+                    joiningEvent={joiningEvent}
+                    onJoinEvent={handleJoinEvent}
+                    onViewDetails={handleViewEventDetails}
+                  />
+                ))}
+              </div>
+            )}
+          </>
+        )}
       </div>
     </div>
   );

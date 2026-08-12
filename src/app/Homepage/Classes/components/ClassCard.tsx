@@ -1,7 +1,8 @@
 "use client";
 
 import Image from "next/image";
-import { Calendar, User, Clock } from "lucide-react";
+import { Calendar, Clock } from "lucide-react";
+import LetterAvatar from "@/components/LetterAvatar";
 
 interface ClassData {
   _id: string;
@@ -93,7 +94,11 @@ export default function ClassCard({
           </p>
           
           <div className="flex items-center space-x-2 text-xs sm:text-sm text-gray-500">
-            <User className="w-3 h-3 sm:w-4 sm:h-4 text-gray-400 flex-shrink-0" />
+            <LetterAvatar
+              name={classItem.teacher.name}
+              src={classItem.teacher.profileImage}
+              size={20}
+            />
             <span className="truncate">{classItem.teacher.name}</span>
             <span className="text-gray-300">•</span>
             <span className="truncate">{classItem.teacher.teacherCategory}</span>
@@ -138,21 +143,27 @@ export default function ClassCard({
             {classItem.students.length} enrolled
           </span>
           
-          <div className="flex space-x-2">
+          <div className="flex space-x-2 items-center">
             <button 
+              type="button"
               onClick={() => onViewDetails(classItem._id)}
               className="text-xs sm:text-sm text-orange-500 font-medium hover:underline focus:outline-none focus:underline"
             >
               Details
             </button>
-            {classItem.status && classItem.meeting_number &&  (
+            {classItem.meeting_number ? (
               <button 
+                type="button"
                 onClick={() => onJoinClass(classItem._id)}
                 disabled={joiningClass === classItem._id}
                 className="bg-orange-500 text-white px-3 py-1.5 sm:px-4 sm:py-2 rounded-md text-xs sm:text-sm hover:bg-orange-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2"
               >
                 {joiningClass === classItem._id ? "Joining..." : "Join"}
               </button>
+            ) : (
+              <span className="text-xs text-gray-400 px-2 py-1.5" title="Teacher has not started the meeting yet">
+                Not started
+              </span>
             )}
           </div>
         </div>

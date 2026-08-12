@@ -7,112 +7,47 @@ import {
   Home,
   Lightbulb,
   Lock,
-  Share2,
   Timer,
   UserPlus,
   Users,
   Wifi,
-  GraduationCap,
   Star,
 } from "lucide-react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import { useEffect, useState, Suspense } from "react";
 import { BASE_URL } from "../../../../lib/utils";
+import { getUserId } from "@/lib/userId";
+import { canJoinAsHost, isOwnResourceWithCookie } from "@/lib/isOwnHost";
 import { getCookie } from "cookies-next";
-
-interface TeacherQualification {
-  title: string;
-  subtitle: string;
-  year: string;
-}
-
-interface TeacherImage {
-  _id: string;
-  filename: string;
-  path: string;
-  key: string;
-}
-
-interface Teacher {
-  _id: string;
-  name: string;
-  email: string;
-  teacherCategory: string;
-  expertise: string[];
-  teachingExperience: string;
-  qualification: TeacherQualification[];
-  additional_courses: string[];
-  achievements: string[];
-  images: TeacherImage[];
-  image: TeacherImage;
-}
-
-interface Student {
-  _id: string;
-  email: string;
-  name: string;
-}
-
-interface EventDetails {
-  _id: string;
-  eventName: string;
-  details: string;
-  availableseats: string;
-  eventmode: string;
-  image: string;
-  level: string;
-  location: string;
-  startDate: string;
-  startTime: string;
-  endTime?: string;
-  type: string;
-  teacher: Teacher;
-  students: Student[];
-  status: boolean;
-  description?: string;
-  meeting_number?: string;
-  password?: string;
-  createdAt: string;
-  updatedAt: string;
-}
-
-interface UserProfile {
-  _id?: string;
-  id?: string;
-  name: string;
-  email: string;
-  role: string;
-  profileImage?: string;
-  AboutMe?: string;
-  notificationToken?: string;
-  favoriteClasses?: string[];
-  favoriteEvents?: string[];
-  favoriteTeachers?: string[];
-  teacherCategory?: string;
-  attendance?: string[];
-  classFeedback?: string[];
-  images?: string[];
-}
+import EventBookHostPanel from "./EventBookHostPanel";
+import HostActionPanel from "@/components/HostActionPanel";
+import LetterAvatar from "@/components/LetterAvatar";
+import EventBookEnrolled from "./EventBookEnrolled";
+import {
+  EventDetails,
+  UserProfile,
+  calculateEventDuration,
+  formatEventDate,
+  getHostImageUrl,
+} from "./eventBookTypes";
 
 function EventsPageContent() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const [eventDetails, setEventDetails] = useState<EventDetails | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [registering, setRegistering] = useState(false);
+  const [joiningHost, setJoiningHost] = useState(false);
   const [toast, setToast] = useState<{
     show: boolean;
     message: string;
     type: "success" | "error";
   }>({ show: false, message: "", type: "success" });
 
-  // Get event ID from URL or use default
   const eventId = searchParams.get("eventId");
 
-
-
-  // Fetch user profile to get userId
   useEffect(() => {
     const fetchUserProfile = async () => {
       try {
@@ -190,7 +125,12 @@ function EventsPageContent() {
 
   // Register for event
   const handleRegister = async () => {
-    if (!userProfile?._id || !eventDetails?._id) {
+    if (isOwnResourceWithCookie(userProfile, eventDetails?.teacher)) {
+      showToast("You are the host of this event", "error");
+      return;
+    }
+    const userId = getUserId(userProfile);
+    if (!userId || !eventDetails?._id) {
       showToast("User or event information not available", "error");
       return;
     }
@@ -207,7 +147,7 @@ function EventsPageContent() {
         },
         body: JSON.stringify({
           eventId: eventDetails._id.toString(),
-          userId: userProfile._id.toString(),
+          userId,
         }),
       });
 
@@ -233,7 +173,9 @@ function EventsPageContent() {
     }
   };
 
-  // Show toast message
+  /**
+   * Shows a short-lived toast notification.
+   */
   const showToast = (message: string, type: "success" | "error") => {
     setToast({ show: true, message, type });
     setTimeout(() => {
@@ -241,66 +183,69 @@ function EventsPageContent() {
     }, 3000);
   };
 
-  // Calculate duration in minutes
-  const calculateDuration = () => {
-    if (!eventDetails?.startTime || !eventDetails?.endTime) return "75 minutes";
-
-    const start = new Date(`2000-01-01T${eventDetails.startTime}`);
-    const end = new Date(`2000-01-01T${eventDetails.endTime}`);
-    const diffMs = end.getTime() - start.getTime();
-    const diffMins = Math.round(diffMs / 60000);
-
-    return `${diffMins} minutes`;
-  };
-
-  // Format date
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString("en-US", {
-      weekday: "long",
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    });
-  };
-
-  // Check if user is already enrolled
+  /**
+   * True when the current user is already in the event students list.
+   */
   const isUserEnrolled = () => {
-    if (!userProfile?._id || !eventDetails?.students) return false;
+    const userId = getUserId(userProfile);
+    if (!userId || !eventDetails?.students) return false;
     return eventDetails.students.some(
-      (student) => student._id === userProfile._id,
+      (student) => String(student._id) === userId,
     );
+  };
+
+  const isEventHost = canJoinAsHost(userProfile, eventDetails?.teacher);
+  const hostImageUrl = getHostImageUrl(eventDetails?.teacher);
+
+  /**
+   * Opens ZoomWebView as event host (role:1). Students cannot host.
+   */
+  const handleJoinAsHost = () => {
+    if (!canJoinAsHost(userProfile, eventDetails?.teacher)) {
+      showToast("Only the event host can join as host", "error");
+      return;
+    }
+    if (!eventDetails?.meeting_number) return;
+    setJoiningHost(true);
+    try {
+      const payload = {
+        number: eventDetails.meeting_number,
+        pass: eventDetails.password || "",
+        userName: userProfile?.name || "Host",
+        email: userProfile?.email || "",
+        eventId: eventDetails._id || "",
+        role: 1,
+      };
+      router.push(
+        `/Homepage/ZoomWebView?ZoomMeetingNumber=${encodeURIComponent(JSON.stringify(payload))}`,
+      );
+    } catch (err) {
+      console.error("Error joining as host", err);
+      showToast("Failed to open meeting", "error");
+    } finally {
+      setJoiningHost(false);
+    }
   };
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center py-10 px-4">
-        <div className="bg-white rounded-xl shadow-md p-6 w-full max-w-6xl">
-          <div className="flex items-center justify-center h-64">
-            <div className="text-lg">Loading event details...</div>
-          </div>
-        </div>
+      <div className="p-10 text-center text-lg" role="status">
+        Loading event details...
       </div>
     );
   }
 
   if (error || !eventDetails) {
     return (
-      <div className="flex justify-center items-center py-10 px-4">
-        <div className="bg-white rounded-xl shadow-md p-6 w-full max-w-6xl">
-          <div className="flex items-center justify-center h-64">
-            <div className="text-lg text-red-500">
-              Error: {error || "Event not found"}
-            </div>
-          </div>
-        </div>
+      <div className="p-10 text-center text-lg text-red-500" role="alert">
+        Error: {error || "Event not found"}
       </div>
     );
   }
 
   return (
-    <div className="flex justify-center items-center py-10 px-4">
-      <div className="bg-white rounded-xl shadow-md p-6 w-full max-w-6xl space-y-8">
+    <div className="px-4 sm:px-6 py-6 max-w-6xl mx-auto w-full">
+      <div className="bg-white rounded-xl border border-orange-100/60 shadow-sm p-4 sm:p-6 space-y-6">
         {/* Toast Notification */}
         {toast.show && (
           <div
@@ -324,56 +269,71 @@ function EventsPageContent() {
         </div>
 
         {/* Host Info and Buttons Row */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mt-6 gap-4">
-          {/* Left side: Host image and title */}
-          <div className="flex items-center gap-4">
-            <div className="relative w-[60px] h-[60px] rounded-full shadow-md ring-2 ring-white overflow-hidden">
-              <Image
-                src={
-                  eventDetails.teacher?.image?.path?.trim()
-                    ? eventDetails.teacher.image.path
-                    : "https://images.unsplash.com/photo-1607746882042-944635dfe10e"
-                }
-                alt={eventDetails.teacher?.name || "Host"}
-                fill
-                className="object-cover"
-              />
-            </div>
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <div className="flex items-center gap-3 min-w-0">
+            <LetterAvatar
+              name={eventDetails.teacher?.name || "Host"}
+              src={
+                hostImageUrl.includes("/images/logo.svg")
+                  ? undefined
+                  : hostImageUrl
+              }
+              size={56}
+              className="ring-2 ring-orange-100"
+            />
 
-            <div>
-              <h2 className="text-xl font-semibold">
+            <div className="min-w-0">
+              <h2 className="text-lg sm:text-xl font-semibold text-gray-900 truncate">
                 {eventDetails.eventName}
               </h2>
-              <p className="text-gray-600 text-sm">
+              <p className="text-gray-500 text-sm line-clamp-2">
                 {eventDetails.details ||
                   "Join our virtual sanctuary for a guided session"}
               </p>
             </div>
           </div>
 
-          {/* Right side: Buttons */}
-          <div className="flex gap-3">
-            <button className="flex items-center gap-2 border px-4 py-2 rounded-md text-gray-600 hover:bg-gray-100 text-sm">
-              <Share2 size={16} /> Share
-            </button>
-            {isUserEnrolled() ? (
-              <button className="bg-green-500 text-white px-4 py-2 rounded-md text-sm shadow cursor-not-allowed">
-                ✅ Already Enrolled
+          <div className="flex flex-wrap gap-2 shrink-0">
+            {isEventHost ? (
+              <span className="inline-flex items-center rounded-full border border-[#ffe0d0] bg-[#fff4ef] px-3 py-2 text-xs font-semibold text-[#c95520]">
+                Your event
+              </span>
+            ) : isUserEnrolled() ? (
+              <button
+                type="button"
+                disabled
+                className="bg-emerald-500 text-white px-4 py-2 rounded-xl text-sm font-medium cursor-not-allowed min-h-[44px]"
+              >
+                Already enrolled
               </button>
             ) : (
               <button
-                className={`px-4 py-2 rounded-md text-sm shadow cursor-pointer ${registering
-                  ? "bg-gray-400 text-white cursor-not-allowed"
-                  : "bg-orange-500 hover:bg-orange-600 text-white"
-                  }`}
+                type="button"
+                className={`px-4 py-2 rounded-xl text-sm font-semibold min-h-[44px] transition-colors ${
+                  registering
+                    ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                    : "bg-[#ed662e] hover:bg-[#c95520] text-white"
+                }`}
                 onClick={handleRegister}
                 disabled={registering}
               >
-                {registering ? "Registering..." : "📅 Register Now"}
+                {registering ? "Registering…" : "Register now"}
               </button>
             )}
           </div>
         </div>
+
+        {isEventHost ? (
+          <div className="mt-6">
+            <HostActionPanel
+              hasMeeting={!!eventDetails.meeting_number}
+              showStart={false}
+              joining={joiningHost}
+              onJoinAsHost={handleJoinAsHost}
+              hint="When the live meeting is ready, join as host to run the session."
+            />
+          </div>
+        ) : null}
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-8">
           {/* Live Stream */}
@@ -406,14 +366,18 @@ function EventsPageContent() {
             <div className="text-sm space-y-2 text-gray-600">
               <div className="flex items-center gap-2">
                 <CalendarDays className="w-4 h-4" />{" "}
-                {formatDate(eventDetails.startDate)}
+                {formatEventDate(eventDetails.startDate)}
               </div>
               <div className="flex items-center gap-2">
                 <Clock className="w-4 h-4" /> {eventDetails.startTime} -{" "}
                 {eventDetails.endTime || "8:45 AM"}
               </div>
               <div className="flex items-center gap-2">
-                <Timer className="w-4 h-4" /> {calculateDuration()}
+                <Timer className="w-4 h-4" />{" "}
+                {calculateEventDuration(
+                  eventDetails.startTime,
+                  eventDetails.endTime,
+                )}
               </div>
               {eventDetails.meeting_number && (
                 <div className="flex items-center gap-2">
@@ -519,106 +483,17 @@ function EventsPageContent() {
             <p className="text-sm text-gray-600 leading-relaxed">
               {eventDetails.description ||
                 eventDetails.details ||
-                "Experience deep relaxation and inner peace from the comfort of your home. This virtual meditation session combines ancient wisdom with modern mindfulness techniques, creating a unique journey of self-discovery and tranquility. Perfect for both beginners and experienced practitioners, our guided session will help you develop a stronger mind-body connection and establish a regular meditation practice."}
+                "Join this session for guided practice and community connection."}
             </p>
           </div>
 
-          {/* Your Host */}
-          <div className="bg-white rounded-xl shadow-sm p-6">
-            <h3 className="text-lg font-semibold mb-3">Your Host</h3>
-            <div className="flex items-center gap-4 mb-4">
-              <div className="relative w-[50px] h-[50px] rounded-full shadow-md ring-2 ring-white overflow-hidden">
-                <Image
-                  src={
-                    eventDetails.teacher?.image?.path ||
-                    "https://images.unsplash.com/photo-1607746882042-944635dfe10e?auto=format&fit=crop&w=80&q=80"
-                  }
-                  alt={eventDetails.teacher?.name || "Host"}
-                  fill
-                  className="object-cover"
-                />
-              </div>
-              <div>
-                <p className="font-medium text-sm">
-                  {eventDetails.teacher?.name || "Unknown Host"}
-                </p>
-                <p className="text-xs text-gray-500">
-                  {eventDetails.teacher?.teacherCategory ||
-                    "Certified Instructor & Wellness Coach"}
-                </p>
-                <p className="text-xs text-gray-500">
-                  {eventDetails.teacher?.teachingExperience} years experience
-                </p>
-              </div>
-            </div>
-
-            {/* Teacher Expertise */}
-            {eventDetails.teacher?.expertise &&
-              eventDetails.teacher.expertise.length > 0 && (
-                <div className="mb-3">
-                  <h4 className="text-sm font-medium mb-2">Expertise</h4>
-                  <div className="flex flex-wrap gap-1">
-                    {eventDetails.teacher.expertise.map((skill, index) => (
-                      <span
-                        key={index}
-                        className="bg-orange-100 text-orange-600 text-xs px-2 py-1 rounded-full"
-                      >
-                        {skill}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-            {/* Teacher Qualifications */}
-            {eventDetails.teacher?.qualification &&
-              eventDetails.teacher.qualification.length > 0 && (
-                <div>
-                  <h4 className="text-sm font-medium mb-2">Qualifications</h4>
-                  <div className="space-y-1">
-                    {eventDetails.teacher.qualification.map((qual, index) => (
-                      <div
-                        key={index}
-                        className="flex items-center gap-2 text-xs text-gray-600"
-                      >
-                        <GraduationCap className="w-3 h-3" />
-                        <span>
-                          {qual.title} - {qual.subtitle} ({qual.year})
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-          </div>
+          <EventBookHostPanel
+            teacher={eventDetails.teacher}
+            hostImageUrl={hostImageUrl}
+          />
         </div>
 
-        {/* Enrolled Students Section */}
-        {eventDetails.students && eventDetails.students.length > 0 && (
-          <div className="bg-white rounded-xl shadow-sm p-6">
-            <h3 className="text-lg font-semibold mb-3">
-              Enrolled Students ({eventDetails.students.length})
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-              {eventDetails.students.map((student) => (
-                <div
-                  key={student._id}
-                  className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg"
-                >
-                  <div className="w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center">
-                    <span className="text-xs font-medium text-orange-600">
-                      {student.name.charAt(0).toUpperCase()}
-                    </span>
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium">{student.name}</p>
-                    <p className="text-xs text-gray-500">{student.email}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
+        <EventBookEnrolled students={eventDetails.students || []} />
       </div>
     </div>
   );

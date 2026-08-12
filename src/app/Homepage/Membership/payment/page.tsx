@@ -31,6 +31,7 @@ function PaymentPageContent() {
 
   const [loading, setLoading] = useState(false);
   const [couponCode, setCouponCode] = useState('');
+  const [couponError, setCouponError] = useState<string | null>(null);
   const [pricing, setPricing] = useState<Pricing | null>(null);
   const [appliedCoupon, setAppliedCoupon] = useState<{ name?: string } | null>(null);
   const [userProfile, setUserProfile] = useState<{ name?: string; email?: string; phone?: string; _id?: string; id?: string } | null>(null);
@@ -63,9 +64,12 @@ function PaymentPageContent() {
 
   const applyCoupon = async () => {
     if (!couponCode.trim()) {
+      setCouponError('Please enter a coupon code');
       toast.error('Please enter a coupon code');
       return;
     }
+
+    setCouponError(null);
 
     try {
       setLoading(true);
@@ -80,6 +84,7 @@ function PaymentPageContent() {
       );
 
       if (!couponValidation.valid) {
+        setCouponError('Invalid coupon code');
         toast.error('Invalid coupon code');
         return;
       }
@@ -128,6 +133,7 @@ function PaymentPageContent() {
     } catch (error) {
       console.error('Error applying coupon:', error);
       const errorMessage = error instanceof Error ? error.message : 'Failed to apply coupon code';
+      setCouponError(errorMessage);
       toast.error(errorMessage);
     } finally {
       setLoading(false);
@@ -150,6 +156,10 @@ function PaymentPageContent() {
       console.log('Order Amount:', orderData?.order?.amount);
 
       // Step 2: Open Razorpay checkout
+      if (!RAZORPAY_KEY_ID) {
+        toast.error('Payment is not configured. Set NEXT_PUBLIC_RAZORPAY_KEY_ID.');
+        return;
+      }
       const profile = userProfile || getUserProfile();
 
       await openRazorpayCheckout({
@@ -219,37 +229,37 @@ function PaymentPageContent() {
     if (!pricing) return null;
 
     return (
-      <div className="bg-white rounded-xl p-6 shadow-md mb-6">
-        <h3 className="text-xl font-bold text-gray-800 mb-4">Pricing Breakdown</h3>
+      <div className="bg-white rounded-xl border border-orange-100/80 p-4 shadow-sm mb-4">
+        <h3 className="text-sm font-semibold text-gray-900 mb-3">Pricing</h3>
 
-        <div className="space-y-3">
+        <div className="space-y-2 text-sm">
           <div className="flex justify-between">
-            <span className="text-gray-600">Base Price:</span>
-            <span className="font-semibold text-gray-800">₹{pricing.basePrice}</span>
+            <span className="text-gray-500">Base price</span>
+            <span className="font-medium text-gray-800">₹{pricing.basePrice}</span>
           </div>
 
-          {pricing.taxes.gst && (
+          {pricing.taxes.gst ? (
             <div className="flex justify-between">
-              <span className="text-gray-600">GST ({pricing.taxes.gst.rate}%):</span>
-              <span className="font-semibold text-gray-800">₹{pricing.taxes.gst.amount.toFixed(2)}</span>
+              <span className="text-gray-500">GST ({pricing.taxes.gst.rate}%)</span>
+              <span className="font-medium text-gray-800">₹{pricing.taxes.gst.amount.toFixed(2)}</span>
             </div>
-          )}
+          ) : null}
 
           <div className="flex justify-between">
-            <span className="text-gray-600">Subtotal:</span>
-            <span className="font-semibold text-gray-800">₹{pricing.subtotal.toFixed(2)}</span>
+            <span className="text-gray-500">Subtotal</span>
+            <span className="font-medium text-gray-800">₹{pricing.subtotal.toFixed(2)}</span>
           </div>
 
-          {pricing.discount && (
+          {pricing.discount ? (
             <div className="flex justify-between">
-              <span className="text-gray-600">Discount ({appliedCoupon?.name}):</span>
-              <span className="font-semibold text-green-600">-₹{pricing.discount.amount.toFixed(2)}</span>
+              <span className="text-gray-500">Discount{appliedCoupon?.name ? ` (${appliedCoupon.name})` : ''}</span>
+              <span className="font-medium text-green-600">-₹{pricing.discount.amount.toFixed(2)}</span>
             </div>
-          )}
+          ) : null}
 
-          <div className="flex justify-between pt-3 border-t-2 border-gray-200">
-            <span className="text-lg font-bold text-gray-800">Total:</span>
-            <span className="text-lg font-bold text-blue-600">₹{pricing.total.toFixed(2)}</span>
+          <div className="flex justify-between pt-2 border-t border-orange-100">
+            <span className="font-semibold text-gray-900">Total</span>
+            <span className="font-semibold text-orange-600">₹{pricing.total.toFixed(2)}</span>
           </div>
         </div>
       </div>
@@ -258,107 +268,108 @@ function PaymentPageContent() {
 
   if (loading && !pricing) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="px-4 sm:px-6 py-16 max-w-xl mx-auto flex justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading pricing information...</p>
+          <div className="animate-spin rounded-full h-8 w-8 border-2 border-orange-500 border-t-transparent mx-auto mb-3" aria-label="Loading" />
+          <p className="text-sm text-gray-500">Loading pricing…</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8 px-4">
-      <div className="max-w-2xl mx-auto">
-        {/* Header */}
-        <div className="mb-6">
-          <Link
-            href="/Homepage/Membership"
-            className="inline-flex items-center gap-2 text-orange-500 hover:text-orange-600 mb-4"
-          >
-            <ArrowLeft className="w-5 h-5" />
-            <span>Back to Plans</span>
-          </Link>
-          <h1 className="text-3xl font-bold text-gray-800 mb-2">Complete Payment</h1>
-          <p className="text-gray-600 text-lg">{planName}</p>
-        </div>
-
-        {renderPricingBreakdown()}
-
-        {/* Coupon Section */}
-        <div className="bg-white rounded-xl p-6 shadow-md mb-6">
-          <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
-            <Tag className="w-5 h-5 text-orange-500" />
-            Have a coupon code?
-          </h3>
-          <div className="flex gap-3">
-            <input
-              type="text"
-              placeholder="Enter coupon code"
-              value={couponCode}
-              onChange={(e) => setCouponCode(e.target.value)}
-              disabled={!!appliedCoupon || loading}
-              className="flex-1 border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-orange-500 disabled:bg-gray-100"
-            />
-            <button
-              onClick={applyCoupon}
-              disabled={loading || !!appliedCoupon}
-              className={`px-6 py-3 rounded-lg font-semibold transition-colors ${
-                appliedCoupon
-                  ? 'bg-green-500 text-white cursor-not-allowed'
-                  : 'bg-blue-500 text-white hover:bg-blue-600 disabled:bg-gray-400'
-              }`}
-            >
-              {appliedCoupon ? 'Applied' : 'Apply'}
-            </button>
-          </div>
-        </div>
-
-        {/* Payment Info */}
-        <div className="bg-white rounded-xl p-6 shadow-md mb-6">
-          <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
-            <Shield className="w-5 h-5 text-green-500" />
-            Payment Information
-          </h3>
-          <ul className="space-y-2 text-gray-600">
-            <li className="flex items-start gap-2">
-              <span className="text-green-500">•</span>
-              <span>Secure payment powered by Razorpay</span>
-            </li>
-            <li className="flex items-start gap-2">
-              <span className="text-green-500">•</span>
-              <span>Your payment information is encrypted and secure</span>
-            </li>
-            <li className="flex items-start gap-2">
-              <span className="text-green-500">•</span>
-              <span>You will receive a confirmation email after payment</span>
-            </li>
-          </ul>
-        </div>
-
-        {/* Pay Button */}
-        <button
-          onClick={initiatePayment}
-          disabled={loading}
-          className={`w-full py-4 rounded-xl font-bold text-lg transition-all duration-200 flex items-center justify-center gap-2 ${
-            loading
-              ? 'bg-gray-400 text-gray-600 cursor-not-allowed'
-              : 'bg-blue-500 text-white hover:bg-blue-600 active:scale-95'
-          }`}
+    <div className="px-4 sm:px-6 py-6 max-w-xl mx-auto w-full">
+      <div className="mb-5">
+        <Link
+          href="/Homepage/Membership"
+          className="inline-flex items-center gap-1.5 text-sm text-orange-500 hover:text-orange-600 mb-3"
         >
-          {loading ? (
-            <>
-              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-              <span>Processing...</span>
-            </>
-          ) : (
-            <>
-              <CreditCard className="w-5 h-5" />
-              <span>Pay ₹{pricing?.total.toFixed(2) || basePrice}</span>
-            </>
-          )}
-        </button>
+          <ArrowLeft className="w-4 h-4" aria-hidden />
+          Back to plans
+        </Link>
+        <h1 className="text-xl sm:text-2xl font-semibold text-gray-900">Complete payment</h1>
+        <p className="text-sm text-gray-500 mt-0.5">{planName}</p>
       </div>
+
+      {renderPricingBreakdown()}
+
+      <div className="bg-white rounded-xl border border-orange-100/80 p-4 shadow-sm mb-4">
+        <h3 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
+          <Tag className="w-4 h-4 text-orange-500" aria-hidden />
+          Coupon
+        </h3>
+        <div className="flex gap-2">
+          <input
+            type="text"
+            placeholder="Enter code"
+            value={couponCode}
+            onChange={(e) => {
+              setCouponCode(e.target.value);
+              if (couponError) setCouponError(null);
+            }}
+            disabled={!!appliedCoupon || loading}
+            aria-label="Coupon code"
+            aria-invalid={!!couponError}
+            aria-describedby={couponError ? 'coupon-error' : undefined}
+            className={`flex-1 border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 disabled:bg-gray-100 min-h-[44px] ${
+              couponError ? 'border-red-400' : 'border-gray-200'
+            }`}
+          />
+          <button
+            type="button"
+            onClick={applyCoupon}
+            disabled={loading || !!appliedCoupon}
+            className={`px-4 py-2.5 rounded-lg text-sm font-semibold transition-colors min-h-[44px] ${
+              appliedCoupon
+                ? 'bg-green-500 text-white cursor-not-allowed'
+                : 'bg-orange-500 text-white hover:bg-orange-600 disabled:bg-gray-300'
+            }`}
+          >
+            {appliedCoupon ? 'Applied' : 'Apply'}
+          </button>
+        </div>
+        {couponError ? (
+          <p id="coupon-error" className="mt-2 text-sm text-red-600" role="alert">
+            {couponError}
+          </p>
+        ) : null}
+        {appliedCoupon && !couponError ? (
+          <p className="mt-2 text-sm text-green-600">Coupon applied</p>
+        ) : null}
+      </div>
+
+      <div className="rounded-xl border border-dashed border-orange-200 bg-orange-50/40 p-4 mb-4">
+        <h3 className="text-sm font-semibold text-gray-900 mb-2 flex items-center gap-2">
+          <Shield className="w-4 h-4 text-orange-500" aria-hidden />
+          Secure checkout
+        </h3>
+        <p className="text-xs text-gray-500 leading-relaxed">
+          Payments are processed by Razorpay. You&apos;ll get a confirmation email after a successful payment.
+        </p>
+      </div>
+
+      <button
+        type="button"
+        onClick={initiatePayment}
+        disabled={loading}
+        className={`w-full py-3 rounded-lg text-sm font-semibold transition-colors flex items-center justify-center gap-2 min-h-[48px] ${
+          loading
+            ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+            : 'bg-orange-500 text-white hover:bg-orange-600'
+        }`}
+      >
+        {loading ? (
+          <>
+            <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" aria-hidden />
+            <span>Processing…</span>
+          </>
+        ) : (
+          <>
+            <CreditCard className="w-4 h-4" aria-hidden />
+            <span>Pay ₹{pricing?.total.toFixed(2) || basePrice}</span>
+          </>
+        )}
+      </button>
     </div>
   );
 }

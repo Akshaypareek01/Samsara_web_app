@@ -5,8 +5,10 @@ import { Calendar, User, Clock, ArrowLeft, Users, Star, X, Play, Square, Trash2,
 import { useEffect, useState } from "react";
 import { getCookie } from "cookies-next";
 import { BASE_URL } from "@/lib/utils";
+import { canJoinAsHost, getCookieUser, getEffectiveRole } from "@/lib/isOwnHost";
 import { useRouter } from "next/navigation";
 import axios from "axios";
+import LetterAvatar from "@/components/LetterAvatar";
 
 interface ClassData {
   _id: string;
@@ -25,6 +27,7 @@ interface ClassData {
   meeting_number?: string;
   password?: string;
   zoomAccountUsed?: string;
+  zoomJoinUrl?: string;
   teacher: string | {
     _id: string;
     name: string;
@@ -133,7 +136,8 @@ function ClassDetailsContent({ classId }: { classId: string }) {
 
         if (response.ok) {
           const data = await response.json();
-          setUserProfile(data);
+          const profile = data?.data || data;
+          setUserProfile(profile);
         }
       } catch (error) {
         console.error("Error fetching user profile:", error);
@@ -144,25 +148,21 @@ function ClassDetailsContent({ classId }: { classId: string }) {
   }, []);
 
 
-  // Check if current user is the teacher who created this class
+  /**
+   * True only for the class teacher (role=teacher + owns class). Students never host.
+   */
   const isClassCreator = () => {
-    if (!userProfile || !classData) {
-      console.log("Missing data:", { userProfile: !!userProfile, classData: !!classData });
-      return false;
-    }
-    if (userProfile.role !== "teacher") {
-      console.log("User role is not teacher:", userProfile.role);
-      return false;
-    }
-    
-    const teacherId = typeof classData.teacher === "string" 
-      ? classData.teacher 
-      : classData.teacher._id;
-    console.log("teacherId ===>", teacherId);
-    console.log("userProfile.id ===>", userProfile.id);
-    const isCreator = userProfile.id === teacherId;
-    console.log("isClassCreator result:", isCreator);
-    return isCreator;
+    if (!classData) return false;
+    return canJoinAsHost(userProfile, classData.teacher);
+  };
+
+  /**
+   * Zoom role for this viewer — students (`role: user`) always attendee (0).
+   */
+  const getZoomJoinRole = (): 0 | 1 => {
+    const role = getEffectiveRole(userProfile) || getCookieUser()?.role;
+    if (role === "user") return 0;
+    return isClassCreator() ? 1 : 0;
   };
 
   const handleStartClass = async () => {
@@ -316,9 +316,14 @@ function ClassDetailsContent({ classId }: { classId: string }) {
 
   const handleJoinClass = async () => {
     if (!classData) return;
-    
+
+    if (!userProfile?.role && !getCookieUser()?.role) {
+      alert("Loading your profile — please try Join again in a moment.");
+      return;
+    }
+
     setJoiningClass(true);
-    
+
     try {
       // Check if meeting number exists
       if (!classData.meeting_number) {
@@ -327,24 +332,37 @@ function ClassDetailsContent({ classId }: { classId: string }) {
         return;
       }
 
-      // Create Zoom meeting URL
+      const zoomRole = getZoomJoinRole();
+      const appRole =
+        getEffectiveRole(userProfile) === "teacher" || getCookieUser()?.role === "teacher"
+          ? "teacher"
+          : "user";
+
+      // Teachers only get role 1 + ZAK; students always attendee (no ZAK)
       const ZoomMeetingNumber = {
         number: classData.meeting_number,
         pass: classData.password || "",
         userName: userProfile?.name || "User",
         email: userProfile?.email || "",
-        role: userProfile?.role === "teacher" ? 1 : 0,
+        role: zoomRole,
+        appRole,
         account: classData.zoomAccountUsed,
         classId: classData._id || "",
+        ...(zoomRole === 1
+          ? {
+              joinUrl: classData.zoomJoinUrl || "",
+              zoomJoinUrl: classData.zoomJoinUrl || "",
+            }
+          : {}),
       };
 
-      console.log("Data ===>", ZoomMeetingNumber);
-      
+      console.log("Data ===>", { ...ZoomMeetingNumber, pass: "***" });
+
       const zoomMeetingNumberString = JSON.stringify(ZoomMeetingNumber);
-      
+
       // Navigate to webview page with meeting data
       router.push(`/Homepage/ZoomWebView?ZoomMeetingNumber=${encodeURIComponent(zoomMeetingNumberString)}`);
-      
+
     } catch (error) {
       console.error("Error joining class:", error);
       alert("Error opening class. Please try again.");
@@ -422,15 +440,13 @@ function ClassDetailsContent({ classId }: { classId: string }) {
 
             {/* Teacher Section */}
             {typeof classData.teacher === "object" && (
-              <div className="bg-gray-50 rounded-xl p-6">
+              <div className="bg-white rounded-xl border border-orange-100/80 shadow-sm p-6">
                 <h3 className="text-xl font-semibold mb-4">Instructor</h3>
                 <div className="flex items-start space-x-4">
-                  <Image
+                  <LetterAvatar
+                    name={classData.teacher.name}
                     src={classData.teacher.profileImage}
-                    alt={classData.teacher.name}
-                    width={80}
-                    height={80}
-                    className="rounded-full object-cover"
+                    size={80}
                   />
                   <div className="flex-1">
                     <h4 className="text-xl font-semibold text-gray-900">{classData.teacher.name}</h4>
@@ -610,18 +626,32 @@ function ClassDetailsContent({ classId }: { classId: string }) {
               )}
 
               {/* Student Join Button - Show only for students (not teachers who created the class) */}
-              {classData.status && classData.meeting_number && !isClassCreator() && (
+              {!isClassCreator() && (
                 <div>
-                  <button
-                    onClick={handleJoinClass}
-                    disabled={joiningClass}
-                    className="w-full bg-orange-500 text-white py-4 px-6 rounded-xl text-lg font-semibold hover:bg-orange-600 transition disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {joiningClass ? "Joining..." : "Join Class"}
-                  </button>
-                  <p className="text-sm text-gray-500 text-center mt-2">
-                    {classData.students.length} students enrolled
-                  </p>
+                  {classData.meeting_number ? (
+                    <>
+                      <button
+                        type="button"
+                        onClick={handleJoinClass}
+                        disabled={joiningClass}
+                        className="w-full bg-orange-500 text-white py-4 px-6 rounded-xl text-lg font-semibold hover:bg-orange-600 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {joiningClass ? "Joining..." : "Join Class"}
+                      </button>
+                      <p className="text-sm text-gray-500 text-center mt-2">
+                        {classData.students.length} students enrolled
+                      </p>
+                    </>
+                  ) : (
+                    <div className="bg-orange-50 border border-orange-100 rounded-xl p-4 text-center">
+                      <p className="text-sm font-medium text-gray-800">
+                        Waiting for teacher to start
+                      </p>
+                      <p className="text-xs text-gray-500 mt-1">
+                        Join will appear here once the live meeting is live.
+                      </p>
+                    </div>
+                  )}
                 </div>
               )}
             </div>

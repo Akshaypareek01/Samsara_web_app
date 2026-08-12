@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { getCookie } from "cookies-next";
 import { BASE_URL } from "@/lib/utils";
+import { getRefId, getUserId } from "@/lib/userId";
 import { useRouter } from "next/navigation";
 import axios from "axios";
 import TeacherClassCard from "../components/TeacherClassCard";
@@ -96,7 +97,11 @@ export default function ScheduledClassesPage() {
         }
 
         // Fetch teacher's classes
-        await fetchTeacherClasses(profileData.id, accessToken as string);
+        const teacherId = getUserId(profileData);
+        if (!teacherId) {
+          throw new Error("Teacher id missing from profile");
+        }
+        await fetchTeacherClasses(teacherId, accessToken as string);
       } catch (err) {
         setError(err instanceof Error ? err.message : "An error occurred");
       } finally {
@@ -129,7 +134,7 @@ export default function ScheduledClassesPage() {
       // Filter to show only classes created by the logged-in teacher
       const filteredClasses = Array.isArray(classesData)
         ? classesData.filter(
-            (cls: ClassData) => cls.teacher === teacherId
+            (cls: ClassData) => getRefId(cls.teacher) === teacherId
           )
         : [];
       setTeacherClasses(filteredClasses);
@@ -162,7 +167,7 @@ export default function ScheduledClassesPage() {
       if (response.data) {
         // Refresh classes to get updated meeting info
         if (userProfile) {
-          await fetchTeacherClasses(userProfile.id, accessToken as string);
+          await fetchTeacherClasses(getUserId(userProfile)!, accessToken as string);
         }
         alert("Class meeting started successfully!");
       }
@@ -205,8 +210,9 @@ export default function ScheduledClassesPage() {
         userName: userProfile && userProfile.name,
         email: userProfile && userProfile.email,
         classId: classData._id || "",
-        role:1,
-        account:classData.zoomAccountUsed
+        role: 1,
+        appRole: "teacher",
+        account: classData.zoomAccountUsed,
       };
 
       const zoomMeetingNumberString = JSON.stringify(ZoomMeetingNumber);
@@ -250,7 +256,7 @@ export default function ScheduledClassesPage() {
       if (response.data) {
         // Refresh classes to get updated meeting info
         if (userProfile) {
-          await fetchTeacherClasses(userProfile.id, accessToken as string);
+          await fetchTeacherClasses(getUserId(userProfile)!, accessToken as string);
         }
         alert("Meeting ended successfully!");
       }
