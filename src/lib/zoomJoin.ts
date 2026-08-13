@@ -18,6 +18,8 @@ export type ZoomJoinPayload = {
   userName?: string;
   email?: string;
   role?: number;
+  /** Bearer token forwarded to the join page so it can request a host signature */
+  authToken?: string | null;
   /** Samsara account role */
   appRole?: "user" | "teacher" | string;
   userRole?: string;
@@ -142,6 +144,9 @@ export function buildZoomJoinMeetingUrl(
   params.set("role", "1");
   params.set("appRole", "teacher");
   params.set("forceHost", "1");
+  // /zoom/generateSDKSignature authenticates the caller before minting a host
+  // signature + ZAK, so the join page needs a token to forward.
+  if (payload.authToken) params.set("authToken", String(payload.authToken));
 
   if (leaveUrl) {
     params.set("leaveUrl", leaveUrl);
@@ -234,7 +239,8 @@ export async function resolveZoomJoinUrl(
       const path = data.sdkJoinPath.startsWith("http")
         ? data.sdkJoinPath
         : `${baseUrl.replace(/\/v1\/?$/, "")}${data.sdkJoinPath}`;
-      return path;
+      if (!accessToken) return path;
+      return `${path}${path.includes("?") ? "&" : "?"}authToken=${encodeURIComponent(accessToken)}`;
     }
 
     return buildZoomJoinMeetingUrl(baseUrl, {
@@ -244,6 +250,7 @@ export async function resolveZoomJoinUrl(
       accountId: data.accountId ?? payload.accountId ?? payload.account,
       role: 1,
       appRole: "teacher",
+      authToken: accessToken,
     });
   }
 

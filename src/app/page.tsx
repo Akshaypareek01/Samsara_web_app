@@ -9,17 +9,42 @@ import { useRouter } from "next/navigation";
 import toast, { Toaster } from "react-hot-toast";
 import Cookies from "js-cookie";
 import { BASE_URL } from "@/lib/utils";
+import RoleMismatchDialog, {
+  loginTypeToRole,
+  roleMismatchMessage,
+  type LoginType,
+} from "@/components/RoleMismatchDialog";
 
 export default function Home() {
   const [step, setStep] = useState("signin");
-  const [loginType, setLoginType] = useState<"student" | "coach">("student");
+  const [loginType, setLoginType] = useState<LoginType>("student");
   const [verificationCode, setVerificationCode] = useState(Array(4).fill(""));
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [roleMismatch, setRoleMismatch] = useState<{
+    message: string;
+    switchTo: LoginType;
+  } | null>(null);
   const [, setCircleSize] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
-  const router = useRouter(); // ✅ Add router hook here
+  const router = useRouter();
+
+  /**
+   * Opens the role-mismatch popup and keeps the user on the sign-in step.
+   * @param selectedTab Tab the user tried to sign in with
+   * @param apiMessage Backend 409 message, if any
+   */
+  const showRoleMismatch = (selectedTab: LoginType, apiMessage?: string) => {
+    const message = apiMessage || roleMismatchMessage(selectedTab);
+    setError(message);
+    setRoleMismatch({
+      message,
+      switchTo: selectedTab === "coach" ? "student" : "coach",
+    });
+    setStep("signin");
+    setVerificationCode(Array(4).fill(""));
+  };
 
   useEffect(() => {
     if (containerRef.current && step === "success") {
@@ -48,10 +73,18 @@ export default function Home() {
       const res = await fetch(`${BASE_URL}/auth/send-login-otp`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: trimmed }),
+        body: JSON.stringify({
+          email: trimmed,
+          role: loginTypeToRole(loginType),
+        }),
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
+        if (res.status === 409) {
+          showRoleMismatch(loginType, data.message);
+          setLoading(false);
+          return;
+        }
         const msg =
           res.status === 429
             ? data.message || "Too many OTP requests. Please wait and try again."
@@ -99,17 +132,17 @@ export default function Home() {
       }
       const data = await res.json();
       const userRole = data?.user?.role as string | undefined;
+      const expectedRole = loginTypeToRole(loginType);
+      if (userRole && userRole !== expectedRole) {
+        showRoleMismatch(loginType);
+        setLoading(false);
+        return;
+      }
+
       const cookieExpires =
         data.tokens?.access?.expires
           ? new Date(data.tokens.access.expires)
           : 7;
-
-      // Tab is a UX hint only — never reject after OTP (OTP is already consumed).
-      if (loginType === "student" && userRole === "teacher") {
-        toast("This account is a Wellness Coach — signing you in as coach");
-      } else if (loginType === "coach" && userRole === "user") {
-        toast("This account is a Student — signing you in as student");
-      }
 
       if (data.tokens?.access?.token) {
         Cookies.set("accessToken", data.tokens.access.token, {
@@ -179,9 +212,26 @@ export default function Home() {
     }
   };
 
+  /**
+   * Switches the Student / Wellness Coach tab from the mismatch popup.
+   * @param nextTab Tab that matches the account
+   */
+  const handleSwitchLoginType = (nextTab: LoginType) => {
+    setLoginType(nextTab);
+    setRoleMismatch(null);
+    setError("");
+  };
+
   return (
     <div className="auth-container">
       <Toaster position="top-right" />
+      <RoleMismatchDialog
+        open={!!roleMismatch}
+        message={roleMismatch?.message || ""}
+        switchTo={roleMismatch?.switchTo || "student"}
+        onClose={() => setRoleMismatch(null)}
+        onSwitch={handleSwitchLoginType}
+      />
       {/* Left Side - Welcome - Fixed Position */}
       <div className="left-side">
         <Image

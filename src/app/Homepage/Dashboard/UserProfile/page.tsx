@@ -1,13 +1,11 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
-import Image from "next/image";
+import React, { useState, useEffect } from "react";
 import {
   User,
   Mail,
   Calendar,
   Edit,
-  Camera,
   Heart,
   Target,
   Award,
@@ -19,12 +17,11 @@ import {
   CheckCircle,
   X,
   Plus,
-  Trash2,
 } from "lucide-react";
 import { getCookie } from "cookies-next";
 import { BASE_URL } from "@/lib/utils";
 import toast, { Toaster } from "react-hot-toast";
-import LetterAvatar from "@/components/LetterAvatar";
+import ProfilePhotoEditor from "./ProfilePhotoEditor";
 
 interface UserImage {
   _id: string;
@@ -104,16 +101,11 @@ export default function UserProfilePage() {
   const [activeTab, setActiveTab] = useState("overview");
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editFormData, setEditFormData] = useState<Partial<UserProfile>>({});
-  const [profileImageFile, setProfileImageFile] = useState<File | null>(null);
-  const [profileImagePreview, setProfileImagePreview] = useState<string | null>(
-    null
-  );
   const [newTag, setNewTag] = useState({
     focusarea: "",
     goal: "",
     health_issues: "",
   });
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const fetchUserProfile = async () => {
@@ -156,8 +148,6 @@ export default function UserProfilePage() {
   useEffect(() => {
     if (isEditModalOpen && userProfile) {
       setEditFormData({ ...userProfile });
-      setProfileImagePreview(null);
-      setProfileImageFile(null);
       setNewTag({ focusarea: "", goal: "", health_issues: "" });
     }
   }, [isEditModalOpen, userProfile]);
@@ -207,28 +197,22 @@ export default function UserProfilePage() {
     });
   };
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      setProfileImageFile(file);
-
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setProfileImagePreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
-    }
+  /**
+   * Applies a newly uploaded profile photo to local profile state.
+   * @param url Public image URL
+   */
+  const handleProfilePhotoUploaded = (url: string) => {
+    setUserProfile((prev) => (prev ? { ...prev, profileImage: url } : prev));
+    setEditFormData((prev) => ({ ...prev, profileImage: url }));
   };
 
-  const triggerFileInput = () => {
-    if (fileInputRef.current) {
-      fileInputRef.current.click();
-    }
-  };
-
-  const handleRemoveImage = () => {
-    setProfileImageFile(null);
-    setProfileImagePreview(null);
+  /**
+   * Clears the profile photo from local profile state.
+   */
+  const handleProfilePhotoRemoved = () => {
+    setUserProfile((prev) =>
+      prev ? { ...prev, profileImage: undefined } : prev
+    );
     setEditFormData((prev) => ({ ...prev, profileImage: undefined }));
   };
 
@@ -238,33 +222,6 @@ export default function UserProfilePage() {
       if (!accessToken) {
         toast.error("Please login to update your profile");
         return;
-      }
-
-      let imageUrl = null;
-
-      // First, upload image if exists
-      if (profileImageFile) {
-        const imageFormData = new FormData();
-        imageFormData.append("file", profileImageFile);
-
-        const uploadResponse = await fetch(`${BASE_URL}/upload`, {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-          },
-          body: imageFormData,
-        });
-
-        if (!uploadResponse.ok) {
-          throw new Error("Failed to upload image");
-        }
-
-        const uploadResult = await uploadResponse.json();
-        if (uploadResult.success) {
-          imageUrl = uploadResult.url;
-        } else {
-          throw new Error("Image upload failed");
-        }
       }
 
       // Prepare profile update data - only include fields that have values
@@ -387,31 +344,6 @@ export default function UserProfilePage() {
 
       const updatedProfile = await profileResponse.json();
 
-      // If image was uploaded, update profile image separately
-      if (imageUrl) {
-        const imageUpdateResponse = await fetch(
-          `${BASE_URL}/users/profile/image`,
-          {
-            method: "PATCH",
-            headers: {
-              Authorization: `Bearer ${accessToken}`,
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              profileImage: imageUrl,
-            }),
-          }
-        );
-
-        if (!imageUpdateResponse.ok) {
-          console.warn("Failed to update profile image");
-        } else {
-          const imageUpdateResult = await imageUpdateResponse.json();
-          updatedProfile.profileImage =
-            imageUpdateResult.profileImage || imageUrl;
-        }
-      }
-
       setUserProfile(updatedProfile);
       setIsEditModalOpen(false);
       toast.success("Profile updated successfully!");
@@ -443,10 +375,6 @@ export default function UserProfilePage() {
       </div>
     );
   }
-
-  const getLatestProfileImage = () => {
-    return userProfile.profileImage || undefined;
-  };
 
   return (
     <>
@@ -500,22 +428,12 @@ export default function UserProfilePage() {
               <div className="bg-white rounded-xl border border-orange-100/80 shadow-sm p-4">
                 {/* Profile Image */}
                 <div className="text-center mb-4">
-                  <div className="relative inline-block">
-                    <div className="inline-flex rounded-full overflow-hidden border-4 border-[#ffe0d0]">
-                      <LetterAvatar
-                        name={userProfile.name}
-                        src={getLatestProfileImage()}
-                        size={96}
-                      />
-                    </div>
-                    <button
-                      type="button"
-                      aria-label="Change profile photo"
-                      className="absolute bottom-0 right-0 bg-[#ed662e] hover:bg-[#c95520] text-white p-2 rounded-full shadow-lg min-h-[36px] min-w-[36px]"
-                    >
-                      <Camera size={14} aria-hidden />
-                    </button>
-                  </div>
+                  <ProfilePhotoEditor
+                    name={userProfile.name}
+                    src={userProfile.profileImage}
+                    size={96}
+                    onUploaded={handleProfilePhotoUploaded}
+                  />
                   <h2 className="text-lg font-semibold text-gray-900 mt-3">
                     {userProfile.name}
                   </h2>
@@ -984,52 +902,16 @@ export default function UserProfilePage() {
               <div className="space-y-5">
                 {/* Profile Image Section */}
                 <div className="text-center">
-                  <div className="relative inline-block">
-                    <div className="inline-flex rounded-full overflow-hidden border-4 border-[#ffe0d0] mx-auto">
-                      {profileImagePreview || editFormData.profileImage ? (
-                        <Image
-                          src={
-                            (profileImagePreview ||
-                              editFormData.profileImage) as string
-                          }
-                          alt="Profile"
-                          width={128}
-                          height={128}
-                          className="w-32 h-32 object-cover"
-                        />
-                      ) : (
-                        <LetterAvatar
-                          name={editFormData.name || userProfile.name}
-                          size={128}
-                        />
-                      )}
-                    </div>
-                    <div className="flex justify-center mt-4 gap-2">
-                      <button
-                        type="button"
-                        onClick={triggerFileInput}
-                        className="flex items-center gap-1 bg-gray-200 hover:bg-gray-300 text-gray-800 px-3 py-1 rounded-md text-sm"
-                      >
-                        <Camera size={14} aria-hidden />
-                        Change
-                      </button>
-                      <button
-                        type="button"
-                        onClick={handleRemoveImage}
-                        className="flex items-center gap-1 bg-red-100 hover:bg-red-200 text-red-700 px-3 py-1 rounded-md text-sm"
-                      >
-                        <Trash2 size={14} aria-hidden />
-                        Remove
-                      </button>
-                    </div>
-                    <input
-                      type="file"
-                      ref={fileInputRef}
-                      onChange={handleImageChange}
-                      accept="image/*"
-                      className="hidden"
-                    />
-                  </div>
+                  <ProfilePhotoEditor
+                    name={editFormData.name || userProfile.name}
+                    src={
+                      editFormData.profileImage || userProfile.profileImage
+                    }
+                    size={128}
+                    showRemove
+                    onUploaded={handleProfilePhotoUploaded}
+                    onRemoved={handleProfilePhotoRemoved}
+                  />
                 </div>
 
                 {/* Basic Info Section */}

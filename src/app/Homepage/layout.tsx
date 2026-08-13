@@ -17,6 +17,9 @@ import { useRouter, usePathname } from "next/navigation";
 import Cookies from "js-cookie";
 import { BASE_URL } from "@/lib/utils";
 import LetterAvatar from "@/components/LetterAvatar";
+import NotificationBell from "@/components/NotificationBell";
+import { PROFILE_UPDATED_EVENT } from "@/lib/uploadProfileImage";
+import { Toaster } from "react-hot-toast";
 
 const PORTAL_ORANGE = "#ed662e";
 
@@ -96,6 +99,24 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     fetchUser();
   }, [router]);
 
+  useEffect(() => {
+    /**
+     * Keeps the sidebar avatar in sync when UserProfile updates the photo.
+     */
+    const onProfileUpdated = (event: Event) => {
+      const url = (event as CustomEvent<{ profileImage?: string }>).detail
+        ?.profileImage;
+      if (typeof url !== "string") return;
+      setUser((prev) =>
+        prev ? { ...prev, profileImage: url || undefined } : prev
+      );
+    };
+    window.addEventListener(PROFILE_UPDATED_EVENT, onProfileUpdated);
+    return () => {
+      window.removeEventListener(PROFILE_UPDATED_EVENT, onProfileUpdated);
+    };
+  }, []);
+
   /**
    * Clears auth cookies and returns to login.
    */
@@ -134,6 +155,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="h-screen flex bg-[#f3f4f6]" style={{ ["--portal-primary" as string]: PORTAL_ORANGE }}>
+      <Toaster position="top-right" />
       {/* Mobile overlay */}
       {isSidebarOpen ? (
         <div
@@ -265,7 +287,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
           <div className="flex-1 min-w-0" aria-hidden="true" />
 
-          <div className="flex items-center gap-3 shrink-0">
+          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+            <NotificationBell />
             <button
               type="button"
               onClick={() => navigate("/Homepage/Dashboard/UserProfile")}
