@@ -69,7 +69,7 @@ export default function WellnessDashboard() {
           : {};
 
         const [classesRes, eventsRes, profileRes] = await Promise.all([
-          fetch(`${BASE_URL}/classes`, { headers }),
+          fetch(`${BASE_URL}/classes/upcoming`, { headers }),
           fetch(`${BASE_URL}/events/upcoming`, { headers }),
           token
             ? fetch(`${BASE_URL}/users/profile`, { headers })
@@ -181,7 +181,7 @@ export default function WellnessDashboard() {
         <FeedCard
           title="Group Classes"
           loading={loading}
-          emptyLabel="No classes available"
+          emptyLabel="No upcoming classes"
           onSeeAll={() => router.push("/Homepage/Group")}
           items={classes.map((c) => ({
             id: c._id,

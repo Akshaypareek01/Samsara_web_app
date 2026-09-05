@@ -86,3 +86,56 @@ export function matchesSearch(query: string, fields: Array<string | undefined | 
   if (!q) return true;
   return fields.some((f) => (f || "").toLowerCase().includes(q));
 }
+
+type ClockHM = { hours: number; minutes: number };
+
+/**
+ * Parses "HH:mm", "H:mm", or "h:mm AM/PM" into 24h hours/minutes.
+ * @param raw - Clock string from API
+ */
+export function parseClockToHM(raw?: string | null): ClockHM | null {
+  if (!raw) return null;
+  const trimmed = String(raw).trim();
+  const match24 = trimmed.match(/^(\d{1,2}):(\d{2})$/);
+  if (match24) {
+    return { hours: parseInt(match24[1], 10), minutes: parseInt(match24[2], 10) };
+  }
+  const match12 = trimmed.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+  if (!match12) return null;
+  let hours = parseInt(match12[1], 10);
+  const minutes = parseInt(match12[2], 10);
+  const mer = match12[3].toUpperCase();
+  if (mer === "PM" && hours !== 12) hours += 12;
+  if (mer === "AM" && hours === 12) hours = 0;
+  return { hours, minutes };
+}
+
+/**
+ * True when a class/event is still upcoming: start day is today or later,
+ * and if today has an end time, that time has not already passed.
+ * Matches mobile Home / Classes finished-vs-upcoming cutoff.
+ *
+ * @param startRaw - ISO start/schedule date
+ * @param endTime - Optional end clock (events)
+ * @param now - Reference instant
+ */
+export function isUpcomingListing(
+  startRaw: string | undefined | null,
+  endTime?: string | null,
+  now = new Date(),
+): boolean {
+  if (!startRaw) return false;
+  const start = new Date(startRaw);
+  if (Number.isNaN(start.getTime())) return false;
+
+  const startDay = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  if (startDay > today) return true;
+  if (startDay < today) return false;
+
+  const endHM = parseClockToHM(endTime);
+  if (!endHM) return true;
+  const endDt = new Date(today);
+  endDt.setHours(endHM.hours, endHM.minutes, 0, 0);
+  return now <= endDt;
+}

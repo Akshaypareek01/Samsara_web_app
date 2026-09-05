@@ -6,7 +6,7 @@ import { useEffect, useMemo, useState } from "react";
 import { BASE_URL } from "@/lib/utils";
 import { getUserId } from "@/lib/userId";
 import { isOwnResource } from "@/lib/isOwnHost";
-import { DAY_CHIPS, matchesDayChip, matchesSearch } from "@/lib/listingFilters";
+import { DAY_CHIPS, isUpcomingListing, matchesDayChip, matchesSearch } from "@/lib/listingFilters";
 import Cookies from "js-cookie";
 import { useRouter, usePathname } from "next/navigation";
 import EmptyState from "@/components/EmptyState";
@@ -69,7 +69,7 @@ export default function ClassesPage() {
       setError("");
       try {
         const token = Cookies.get("accessToken");
-        const res = await fetch(`${BASE_URL}/classes`, {
+        const res = await fetch(`${BASE_URL}/classes/upcoming`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         const data = await res.json();
@@ -90,7 +90,7 @@ export default function ClassesPage() {
       try {
         const token = Cookies.get("accessToken");
         const res = await fetch(
-          `${BASE_URL}/classes/student/${studentId}/classes`,
+          `${BASE_URL}/classes/student/${studentId}/classes/upcoming`,
           { headers: { Authorization: `Bearer ${token}` } },
         );
         const data = await res.json();
@@ -127,6 +127,7 @@ export default function ClassesPage() {
   const filteredClasses = useMemo(() => {
     return classes.filter((classItem) => {
       const dateRaw = classItem.startDate || classItem.schedule;
+      if (!isUpcomingListing(dateRaw)) return false;
       if (!matchesDayChip(dateRaw, selectedFilter)) return false;
       if (
         !matchesSearch(searchQuery, [
@@ -146,6 +147,12 @@ export default function ClassesPage() {
   }, [classes, selectedFilter, searchQuery, levelFilter, typeFilter]);
 
   const visible = seeAll ? filteredClasses : filteredClasses.slice(0, 6);
+
+  const upcomingMyClasses = useMemo(
+    () =>
+      myClasses.filter((c) => isUpcomingListing(c.startDate || c.schedule)),
+    [myClasses],
+  );
 
   return (
     <div className="px-4 sm:px-6 py-6 max-w-6xl mx-auto w-full">
@@ -217,7 +224,11 @@ export default function ClassesPage() {
             ) : filteredClasses.length === 0 ? (
               <div className="col-span-full">
                 <EmptyState
-                  message={`No classes available for ${selectedFilter.toLowerCase()}.`}
+                  message={
+                    selectedFilter === "All"
+                      ? "No upcoming classes."
+                      : `No upcoming classes for ${selectedFilter.toLowerCase()}.`
+                  }
                 />
               </div>
             ) : (
@@ -302,7 +313,7 @@ export default function ClassesPage() {
 
         <section className="rounded-xl border border-[#ffe0d0] bg-[#fff4ef]/50 p-4 space-y-3">
           <SectionHeader title="My Classes" showAction={false} />
-          {myClasses.length === 0 ? (
+          {upcomingMyClasses.length === 0 ? (
             <EmptyState
               message="No enrolled classes yet."
               actionLabel="Browse classes"
@@ -310,7 +321,7 @@ export default function ClassesPage() {
             />
           ) : (
             <ul className="space-y-2">
-              {myClasses.map((classItem, index) => (
+              {upcomingMyClasses.map((classItem, index) => (
                 <li
                   key={classItem._id || index}
                   className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 bg-white rounded-lg border border-orange-50 px-3 py-2.5"

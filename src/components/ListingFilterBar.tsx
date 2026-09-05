@@ -167,8 +167,7 @@ export default function ListingFilterBar({
       <div className="flex items-center justify-between gap-3 pt-1 border-t border-[#ffe0d0]/80">
         <p className="text-xs text-gray-500">
           <span className="font-semibold text-gray-800">{resultCount}</span>{" "}
-          {resultNoun}
-          {resultCount === 1 ? "" : "s"}
+          {`${resultNoun}${resultCount === 1 ? "" : "s"}`}
         </p>
         {hasActive ? (
           <button

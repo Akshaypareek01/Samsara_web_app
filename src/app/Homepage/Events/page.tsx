@@ -6,7 +6,12 @@ import { useEffect, useMemo, useState } from "react";
 import Cookies from "js-cookie";
 import { BASE_URL } from "@/lib/utils";
 import { isOwnResource } from "@/lib/isOwnHost";
-import { DAY_CHIPS, matchesDayChip, matchesSearch } from "@/lib/listingFilters";
+import {
+  DAY_CHIPS,
+  isUpcomingListing,
+  matchesDayChip,
+  matchesSearch,
+} from "@/lib/listingFilters";
 import EmptyState from "@/components/EmptyState";
 import ListingFilterBar from "@/components/ListingFilterBar";
 import SectionHeader from "@/components/SectionHeader";
@@ -21,6 +26,7 @@ type Event = ListingEvent & {
   students?: { name: string }[];
   meeting_number?: string;
   password?: string;
+  endTime?: string;
 };
 
 /**
@@ -150,6 +156,7 @@ export default function EventsPage() {
 
   const filteredEvents = useMemo(() => {
     return events.filter((event) => {
+      if (!isUpcomingListing(event.startDate, event.endTime)) return false;
       if (!matchesDayChip(event.startDate, selectedFilter)) return false;
       if (
         !matchesSearch(searchQuery, [
@@ -167,11 +174,19 @@ export default function EventsPage() {
     });
   }, [events, selectedFilter, searchQuery, levelFilter, typeFilter]);
 
+  const upcomingUserEvents = useMemo(
+    () =>
+      userEvents.filter((event) =>
+        isUpcomingListing(event.startDate, event.endTime),
+      ),
+    [userEvents],
+  );
+
   /**
    * Opens Zoom for a registered online event.
    */
   const handleJoinEvent = (eventId: string) => {
-    const event = userEvents.find((e) => e._id === eventId);
+    const event = upcomingUserEvents.find((e) => e._id === eventId);
     if (!event?.meeting_number) {
       alert("Event not started yet – no meeting link available");
       return;
@@ -300,7 +315,7 @@ export default function EventsPage() {
             onAction={() => setSeeAllOnline((v) => !v)}
           />
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-            {renderGrid(onlineEvents, "No events scheduled", seeAllOnline)}
+            {renderGrid(onlineEvents, "No upcoming events.", seeAllOnline)}
           </div>
         </section>
 
@@ -312,7 +327,7 @@ export default function EventsPage() {
             onAction={() => setSeeAllOffline((v) => !v)}
           />
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-            {renderGrid(offlineEvents, "No offline events", seeAllOffline)}
+            {renderGrid(offlineEvents, "No upcoming offline events.", seeAllOffline)}
           </div>
         </section>
 
@@ -322,15 +337,15 @@ export default function EventsPage() {
             <div className="h-20 rounded-lg bg-[#fff4ef] animate-pulse" />
           ) : userEventsError ? (
             <EmptyState message={userEventsError} />
-          ) : userEvents.length === 0 ? (
+          ) : upcomingUserEvents.length === 0 ? (
             <EmptyState
-              message="No events scheduled"
+              message="No upcoming enrolled events."
               actionLabel="Browse events"
               onAction={() => setSelectedFilter("All")}
             />
           ) : (
             <ul className="space-y-2">
-              {userEvents.map((event) => (
+              {upcomingUserEvents.map((event) => (
                 <li
                   key={event._id}
                   className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 bg-white rounded-lg border border-orange-50 px-3 py-2.5"
