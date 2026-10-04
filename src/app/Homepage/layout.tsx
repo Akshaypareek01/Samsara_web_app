@@ -172,27 +172,20 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         } fixed md:static inset-y-0 left-0 z-40 w-60 flex flex-col bg-[#ed662e] text-white shadow-[4px_0_24px_rgba(237,102,46,0.15)] transition-transform duration-300 ease-in-out`}
         aria-label="Main navigation"
       >
-        <div className="flex items-center justify-between gap-2 px-4 py-5 border-b border-white/15">
-          <div className="flex items-center gap-2 min-w-0">
+        <div className="relative flex items-center justify-center px-3 py-4 border-b border-white/15">
+          <div className="rounded-lg bg-white px-2.5 py-1.5">
             <Image
-              src="/images/logo.svg"
+              src="/images/SamsaraLogo.png"
               alt="Samsara"
-              width={36}
-              height={36}
-              className="brightness-0 invert shrink-0"
+              width={168}
+              height={40}
+              className="h-8 w-auto object-contain"
+              priority
             />
-            <div className="min-w-0">
-              <p className="text-sm font-bold tracking-wide uppercase truncate">
-                Samsara
-              </p>
-              <p className="text-[10px] text-white/65 uppercase tracking-wider">
-                Wellness
-              </p>
-            </div>
           </div>
           <button
             type="button"
-            className="md:hidden inline-flex items-center justify-center w-8 h-8 rounded-lg bg-white/12 hover:bg-white/20 transition"
+            className="md:hidden absolute right-3 inline-flex items-center justify-center w-8 h-8 rounded-lg bg-white/12 hover:bg-white/20 transition"
             aria-label="Close sidebar"
             onClick={() => setSidebarOpen(false)}
           >
