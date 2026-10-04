@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { Calendar, Clock, Users, Play, Trash2, Square, ExternalLink } from "lucide-react";
+import { isClassScheduleEnded } from "@/lib/classScheduleStatus";
 
 interface ClassData {
   _id: string;
@@ -35,11 +36,15 @@ interface ClassData {
   };
   schedules: Array<{
     _id: string;
+    date?: string;
     days: string[];
     startTime: string;
     endTime: string;
   }>;
   schedule: string;
+  completedAt?: string | null;
+  startTime?: string;
+  endTime?: string;
   students: string[];
 }
 
@@ -65,7 +70,9 @@ export default function TeacherClassCard({
   loadingAction,
 }: TeacherClassCardProps) {
   const hasMeeting = !!classItem.meeting_number;
-  const isMeetingActive = hasMeeting && classItem.status;
+  const ended = isClassScheduleEnded(classItem);
+  const isMeetingActive = hasMeeting && classItem.status && !ended;
+  const statusLabel = ended ? "Finished" : classItem.status ? "Active" : "Inactive";
 
   return (
     <div className="bg-white rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow duration-200 overflow-hidden">
@@ -99,12 +106,14 @@ export default function TeacherClassCard({
             </h3>
             <span
               className={`text-xs px-2 py-1 rounded-full flex-shrink-0 ${
-                classItem.status
+                ended
+                  ? "bg-gray-200 text-gray-700"
+                  : classItem.status
                   ? "bg-green-100 text-green-600"
                   : "bg-gray-100 text-gray-600"
               }`}
             >
-              {classItem.status ? "Active" : "Inactive"}
+              {statusLabel}
             </span>
           </div>
 
@@ -114,7 +123,7 @@ export default function TeacherClassCard({
 
           <div className="flex items-center space-x-2 text-xs sm:text-sm text-gray-500">
             <Users className="w-3 h-3 sm:w-4 sm:h-4 text-gray-400 flex-shrink-0" />
-            <span>{classItem.students.length} enrolled</span>
+            <span>{classItem.students?.length || 0} enrolled</span>
             <span className="text-gray-300">•</span>
             <span>Max {classItem.maxCapacity}</span>
           </div>
@@ -131,7 +140,7 @@ export default function TeacherClassCard({
             <div className="flex items-center space-x-2">
               <Calendar className="w-3 h-3 sm:w-4 sm:h-4 text-orange-500 flex-shrink-0" />
               <span className="truncate">
-                {classItem.schedules[0].days.join(", ")}
+                {(classItem.schedules[0].days || []).join(", ")}
               </span>
               <span className="text-gray-300">•</span>
               <span className="truncate">
@@ -142,7 +151,7 @@ export default function TeacherClassCard({
           )}
 
           <div className="flex flex-wrap gap-1 mt-2">
-            {classItem.level.slice(0, 2).map((level, idx) => (
+            {(classItem.level || []).slice(0, 2).map((level, idx) => (
               <span
                 key={idx}
                 className="text-xs px-2 py-1 bg-orange-100 text-orange-600 rounded-full"
@@ -150,9 +159,9 @@ export default function TeacherClassCard({
                 {level}
               </span>
             ))}
-            {classItem.level.length > 2 && (
+            {(classItem.level || []).length > 2 && (
               <span className="text-xs px-2 py-1 bg-gray-100 text-gray-600 rounded-full">
-                +{classItem.level.length - 2}
+                +{(classItem.level || []).length - 2}
               </span>
             )}
           </div>
@@ -161,7 +170,7 @@ export default function TeacherClassCard({
         {/* Action Buttons */}
         <div className="flex flex-col gap-2 pt-3 border-t border-gray-100">
           <div className="flex gap-2 flex-wrap">
-            {!hasMeeting && classItem.status && (
+            {!ended && !hasMeeting && classItem.status && (
               <button
                 onClick={() => onStartClass(classItem._id)}
                 disabled={isLoading && loadingAction === "start"}
@@ -172,7 +181,7 @@ export default function TeacherClassCard({
               </button>
             )}
 
-            {hasMeeting && classItem.status && (
+            {!ended && hasMeeting && classItem.status && (
               <>
                 <button
                   onClick={() => onJoinClass(classItem._id)}
@@ -191,6 +200,15 @@ export default function TeacherClassCard({
                   {loadingAction === "end" ? "Ending..." : "End Meeting"}
                 </button>
               </>
+            )}
+
+            {ended && (
+              <p
+                className="flex-1 min-w-[120px] text-center text-xs sm:text-sm font-medium text-gray-500 bg-gray-100 px-3 py-2 rounded-md"
+                role="status"
+              >
+                Class ended
+              </p>
             )}
 
             <button

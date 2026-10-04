@@ -111,7 +111,7 @@ export default function NotificationBell() {
       }
     }
 
-    const href = notificationHref(item.actionUrl);
+    const href = notificationHref(item.actionUrl, item.metadata);
     if (href) {
       setOpen(false);
       router.push(href);

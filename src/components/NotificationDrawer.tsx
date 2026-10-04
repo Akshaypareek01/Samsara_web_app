@@ -121,7 +121,7 @@ export default function NotificationDrawer({
           ) : (
             <ul className="divide-y divide-gray-100">
               {notifications.map((item) => {
-                const href = notificationHref(item.actionUrl);
+                const href = notificationHref(item.actionUrl, item.metadata);
                 return (
                   <li key={item._id}>
                     <button

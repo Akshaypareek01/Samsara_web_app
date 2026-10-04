@@ -10,7 +10,23 @@ export type AppNotification = {
   createdAt: string;
   actionUrl?: string | null;
   actionText?: string | null;
+  metadata?: Record<string, unknown> | null;
 };
+
+const OBJECT_ID = /^[a-f0-9]{24}$/i;
+
+/**
+ * Pulls a Mongo id out of a string or `{ _id | id | $oid }` value.
+ * @param value Raw metadata field
+ */
+function asObjectId(value: unknown): string | null {
+  if (typeof value === "string" && OBJECT_ID.test(value.trim())) return value.trim();
+  if (value && typeof value === "object") {
+    const rec = value as { _id?: unknown; id?: unknown; $oid?: unknown };
+    return asObjectId(rec.$oid) || asObjectId(rec._id) || asObjectId(rec.id);
+  }
+  return null;
+}
 
 /**
  * Auth headers for notification API calls.
@@ -81,16 +97,32 @@ export async function markAllNotificationsRead(): Promise<void> {
 }
 
 /**
- * Maps API actionUrl paths onto consumer-web routes.
+ * Maps API actionUrl / metadata onto consumer-web routes.
+ * Prefers metadata.classId so a notification id is never used as the class id.
  * @param actionUrl Backend action URL
+ * @param metadata Notification metadata (classId / eventId)
  */
-export function notificationHref(actionUrl?: string | null): string | null {
+export function notificationHref(
+  actionUrl?: string | null,
+  metadata?: Record<string, unknown> | null
+): string | null {
+  const classId =
+    asObjectId(metadata?.classId) || asObjectId(metadata?.classid);
+  if (classId) return `/Homepage/Classes/${classId}`;
+
+  const eventId =
+    asObjectId(metadata?.eventId) || asObjectId(metadata?.eventid);
+  if (eventId) return `/Homepage/Events/${eventId}`;
+
   if (!actionUrl) return null;
-  if (actionUrl.startsWith("/Homepage")) return actionUrl;
+  if (actionUrl.startsWith("/Homepage/Classes/") || actionUrl.startsWith("/Homepage/Events/")) {
+    return actionUrl;
+  }
   const classMatch = actionUrl.match(/\/classes\/([a-f0-9]{24})/i);
   if (classMatch) return `/Homepage/Classes/${classMatch[1]}`;
   const eventMatch = actionUrl.match(/\/events\/([a-f0-9]{24})/i);
   if (eventMatch) return `/Homepage/Events/${eventMatch[1]}`;
+  if (actionUrl.startsWith("/Homepage")) return actionUrl;
   return null;
 }
 

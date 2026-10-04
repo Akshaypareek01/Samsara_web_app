@@ -10,6 +10,7 @@ import { useEffect, useState, Suspense } from "react";
 import { ArrowLeft, Clock, CalendarDays, Users } from "lucide-react";
 import LetterAvatar from "@/components/LetterAvatar";
 import { formatDisplayDate } from "@/lib/formatDisplayDate";
+import { isClassScheduleEnded } from "@/lib/classScheduleStatus";
 import PortalCard from "@/components/PortalCard";
 import HostActionPanel from "@/components/HostActionPanel";
 
@@ -24,6 +25,14 @@ interface ClassType {
   duration?: number;
   startDate?: string;
   schedule?: string;
+  startTime?: string;
+  endTime?: string;
+  completedAt?: string | null;
+  schedules?: Array<{
+    date?: string;
+    startTime?: string;
+    endTime?: string;
+  }>;
   availableseats?: number;
   maxSeats?: number;
   maxCapacity?: number;
@@ -387,6 +396,7 @@ function ClassDetailsPageContent() {
         <HostActionPanel
           hasMeeting={!!classData.meeting_number}
           showStart
+          ended={isClassScheduleEnded(classData)}
           starting={loadingAction === "start"}
           joining={joiningMeeting}
           ending={loadingAction === "end"}

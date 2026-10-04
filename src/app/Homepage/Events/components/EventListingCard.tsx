@@ -4,6 +4,7 @@ import Image from "next/image";
 import { Clock, DollarSign, Users } from "lucide-react";
 import LetterAvatar from "@/components/LetterAvatar";
 import { formatDisplayDate } from "@/lib/formatDisplayDate";
+import { eventSpotsLeft } from "@/lib/eventCapacity";
 
 export type ListingEvent = {
   _id: string;
@@ -21,6 +22,8 @@ export type ListingEvent = {
     profileImage?: string;
   };
   status?: boolean;
+  students?: unknown[] | null;
+  studentCount?: number | null;
 };
 
 type EventListingCardProps = {
@@ -28,6 +31,8 @@ type EventListingCardProps = {
   onBook: (eventId: string) => void;
   /** When true, hide Book (current user hosts this event). */
   isOwn?: boolean;
+  /** When true, the current user is already on the roster. */
+  isRegistered?: boolean;
 };
 
 /**
@@ -37,7 +42,9 @@ export default function EventListingCard({
   event,
   onBook,
   isOwn = false,
+  isRegistered = false,
 }: EventListingCardProps) {
+  const spotsLeft = eventSpotsLeft(event);
   return (
     <article className="rounded-xl border border-orange-100/80 overflow-hidden bg-white shadow-sm hover:shadow-md transition-shadow">
       <div className="relative h-[140px] w-full bg-[#fff4ef]">
@@ -83,11 +90,18 @@ export default function EventListingCard({
         <div className="flex justify-between items-center pt-1">
           <span className="inline-flex items-center gap-1 text-xs text-gray-400">
             <Users size={13} aria-hidden />
-            {event.availableseats} spots
+            {spotsLeft} spots
           </span>
           {isOwn ? (
             <span className="text-xs font-medium text-[#ed662e] px-2 py-1.5">
               You&apos;re the host
+            </span>
+          ) : isRegistered ? (
+            <span
+              className="text-xs font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-1.5 rounded-md"
+              role="status"
+            >
+              Registered
             </span>
           ) : (
             <button

@@ -30,6 +30,8 @@ import {
   formatEventDate,
   getHostImageUrl,
 } from "./eventBookTypes";
+import { eventCapacity, eventSpotsLeft } from "@/lib/eventCapacity";
+import { isViewerRegistered } from "@/lib/eventRegistration";
 
 function EventsPageContent() {
   const searchParams = useSearchParams();
@@ -130,6 +132,10 @@ function EventsPageContent() {
       return;
     }
     const userId = getUserId(userProfile);
+    if (isViewerRegistered(eventDetails?.students, userId)) {
+      showToast("You are already registered for this event.", "error");
+      return;
+    }
     if (!userId || !eventDetails?._id) {
       showToast("User or event information not available", "error");
       return;
@@ -186,13 +192,8 @@ function EventsPageContent() {
   /**
    * True when the current user is already in the event students list.
    */
-  const isUserEnrolled = () => {
-    const userId = getUserId(userProfile);
-    if (!userId || !eventDetails?.students) return false;
-    return eventDetails.students.some(
-      (student) => String(student._id) === userId,
-    );
-  };
+  const isUserEnrolled = () =>
+    isViewerRegistered(eventDetails?.students, getUserId(userProfile));
 
   const isEventHost = canJoinAsHost(userProfile, eventDetails?.teacher);
   const hostImageUrl = getHostImageUrl(eventDetails?.teacher);
@@ -401,14 +402,16 @@ function EventsPageContent() {
             </div>
             <div className="text-sm space-y-2 text-gray-600">
               <div className="flex items-center gap-2">
-                <UserPlus className="w-4 h-4" /> {eventDetails.availableseats}{" "}
-                Spots Left
+                <UserPlus className="w-4 h-4" />{" "}
+                {eventCapacity(eventDetails) > 0
+                  ? `${eventSpotsLeft(eventDetails)} Spots Left`
+                  : "Limited spots"}
               </div>
               <div className="flex items-center gap-2">
-                <Users className="w-4 h-4" /> Max{" "}
-                {parseInt(eventDetails.availableseats) +
-                  (eventDetails.students?.length || 0)}{" "}
-                people
+                <Users className="w-4 h-4" />{" "}
+                {eventCapacity(eventDetails) > 0
+                  ? `Max ${eventCapacity(eventDetails)} people`
+                  : "Limited capacity"}
               </div>
               <div className="flex items-center gap-2">
                 <Lightbulb className="w-4 h-4" />{" "}

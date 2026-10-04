@@ -414,7 +414,7 @@ function EventDetailsContent({ eventId }: { eventId: string }) {
                   <div>
                     <p className="font-medium">Enrolled</p>
                     <p className="text-gray-600">
-                      {eventData.students.length} participants
+                      {eventData.students?.length ?? 0} participants
                     </p>
                   </div>
                 </div>
@@ -451,7 +451,7 @@ function EventDetailsContent({ eventId }: { eventId: string }) {
               isEnrolled={isEnrolled}
               meetingNumber={eventData.meeting_number}
               joining={joiningEvent}
-              enrolledCount={eventData.students.length}
+              enrolledCount={eventData.students?.length ?? 0}
               eventStatus={eventData.status}
               onJoinAsHost={() => handleJoinEvent(true)}
               onRegister={() =>

@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { getCookie } from "cookies-next";
 import { BASE_URL } from "@/lib/utils";
 import { canJoinAsHost, getCookieUser, getEffectiveRole } from "@/lib/isOwnHost";
+import { isClassScheduleEnded } from "@/lib/classScheduleStatus";
 import { useRouter } from "next/navigation";
 import axios from "axios";
 import LetterAvatar from "@/components/LetterAvatar";
@@ -43,11 +44,15 @@ interface ClassData {
   };
   schedules: Array<{
     _id: string;
+    date?: string;
     days: string[];
     startTime: string;
     endTime: string;
   }>;
   schedule: string;
+  completedAt?: string | null;
+  startTime?: string;
+  endTime?: string;
   students: string[];
 }
 
@@ -104,11 +109,15 @@ function ClassDetailsContent({ classId }: { classId: string }) {
           },
         });
 
-        if (!response.ok) {
-          throw new Error("Failed to fetch class details");
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok || data?.success === false) {
+          const message =
+            (typeof data?.error === "string" && data.error) ||
+            (typeof data?.message === "string" && data.message) ||
+            `Failed to fetch class details (${response.status})`;
+          throw new Error(message);
         }
 
-        const data = await response.json();
         setClassData(data.data || data);
       } catch (err) {
         setError(err instanceof Error ? err.message : "An error occurred");
@@ -391,6 +400,9 @@ function ClassDetailsContent({ classId }: { classId: string }) {
     );
   }
 
+  const ended = isClassScheduleEnded(classData);
+  const statusLabel = ended ? "Finished" : classData.status ? "Active" : "Inactive";
+
   return (
     <div className="p-6 md:p-12 bg-white">
       {/* Header */}
@@ -408,8 +420,8 @@ function ClassDetailsContent({ classId }: { classId: string }) {
         {/* Class Image */}
         <div className="relative mb-8">
           <Image
-            src={classData.image}
-            alt={classData.title}
+            src={classData.image || "/images/class1.svg"}
+            alt={classData.title || "Class"}
             width={800}
             height={400}
             className="w-full h-64 md:h-80 object-cover rounded-xl"
@@ -419,11 +431,13 @@ function ClassDetailsContent({ classId }: { classId: string }) {
               {classData.classType}
             </span>
             <span className={`text-sm px-3 py-1 rounded-full ${
-              classData.status 
+              ended
+                ? 'bg-gray-200 text-gray-700'
+                : classData.status 
                 ? 'bg-green-100 text-green-600' 
                 : 'bg-gray-100 text-gray-600'
             }`}>
-              {classData.status ? 'Active' : 'Inactive'}
+              {statusLabel}
             </span>
           </div>
         </div>
@@ -455,7 +469,7 @@ function ClassDetailsContent({ classId }: { classId: string }) {
                       <p className="text-gray-600 mb-3">{classData.teacher.AboutMe}</p>
                     )}
                     <div className="flex flex-wrap gap-2">
-                      {classData.teacher.expertise.map((skill, idx) => (
+                      {(classData.teacher.expertise || []).map((skill, idx) => (
                         <span key={idx} className="text-sm px-3 py-1 bg-orange-100 text-orange-600 rounded-full">
                           {skill}
                         </span>
@@ -471,7 +485,7 @@ function ClassDetailsContent({ classId }: { classId: string }) {
               <div>
                 <h3 className="text-xl font-semibold mb-4">What You&apos;ll Gain</h3>
                 <ul className="space-y-3">
-                  {classData.whatYoullGain.map((item, idx) => (
+                  {(classData.whatYoullGain || []).map((item, idx) => (
                     <li key={idx} className="flex items-start space-x-3">
                       <Star className="w-5 h-5 text-orange-500 mt-1 flex-shrink-0" />
                       <span className="text-gray-600">{item}</span>
@@ -486,7 +500,7 @@ function ClassDetailsContent({ classId }: { classId: string }) {
               <div>
                 <h3 className="text-xl font-semibold mb-4">Skip If</h3>
                 <ul className="space-y-3">
-                  {classData.skipIf.map((item, idx) => (
+                  {(classData.skipIf || []).map((item, idx) => (
                     <li key={idx} className="flex items-start space-x-3">
                       <X className="w-5 h-5 text-red-500 mt-1 flex-shrink-0" />
                       <span className="text-gray-600">{item}</span>
@@ -522,7 +536,7 @@ function ClassDetailsContent({ classId }: { classId: string }) {
                   <div>
                     <p className="font-medium">Schedule</p>
                     <p className="text-gray-600">
-                      {classData.schedules[0]?.days.join(', ')}
+                      {(classData.schedules?.[0]?.days || []).join(', ') || 'Schedule not set'}
                     </p>
                     <p className="text-gray-600">
                       {classData.schedules[0]?.startTime} - {classData.schedules[0]?.endTime}
@@ -533,7 +547,7 @@ function ClassDetailsContent({ classId }: { classId: string }) {
                   <User className="w-5 h-5 text-orange-500" />
                   <div>
                     <p className="font-medium">Enrolled</p>
-                    <p className="text-gray-600">{classData.students.length} students</p>
+                    <p className="text-gray-600">{classData.students?.length || 0} students</p>
                   </div>
                 </div>
               </div>
@@ -546,7 +560,7 @@ function ClassDetailsContent({ classId }: { classId: string }) {
                 <div>
                   <p className="font-medium mb-2">Level</p>
                   <div className="flex flex-wrap gap-2">
-                    {classData.level.map((level, idx) => (
+                    {(classData.level || []).map((level, idx) => (
                       <span key={idx} className="text-sm px-3 py-1 bg-orange-100 text-orange-600 rounded-full">
                         {level}
                       </span>
@@ -556,7 +570,7 @@ function ClassDetailsContent({ classId }: { classId: string }) {
                 <div>
                   <p className="font-medium mb-2">Perfect For</p>
                   <div className="flex flex-wrap gap-2">
-                    {classData.perfectFor.map((item, idx) => (
+                    {(classData.perfectFor || []).map((item, idx) => (
                       <span key={idx} className="text-sm px-3 py-1 bg-green-100 text-green-600 rounded-full">
                         {item}
                       </span>
@@ -580,7 +594,7 @@ function ClassDetailsContent({ classId }: { classId: string }) {
                   <h3 className="text-lg font-semibold mb-4">Manage Class</h3>
                   <div className="space-y-3">
                     {/* Show Start Class button when no meeting number exists */}
-                    {!classData.meeting_number && (
+                    {!ended && !classData.meeting_number && (
                       <button
                         onClick={handleStartClass}
                         disabled={loadingAction === "start"}
@@ -592,7 +606,7 @@ function ClassDetailsContent({ classId }: { classId: string }) {
                     )}
 
                     {/* Show Join and End Meeting buttons when meeting number exists */}
-                    {classData.meeting_number && (
+                    {!ended && classData.meeting_number && (
                       <>
                         <button
                           onClick={handleJoinClass}
@@ -613,6 +627,12 @@ function ClassDetailsContent({ classId }: { classId: string }) {
                       </>
                     )}
 
+                    {ended && (
+                      <p className="text-sm font-medium text-gray-600 bg-gray-50 border border-gray-200 rounded-lg px-4 py-3 text-center" role="status">
+                        This class has ended.
+                      </p>
+                    )}
+
                     <button
                       onClick={handleDeleteClass}
                       disabled={loadingAction === "delete"}
@@ -628,7 +648,11 @@ function ClassDetailsContent({ classId }: { classId: string }) {
               {/* Student Join Button - Show only for students (not teachers who created the class) */}
               {!isClassCreator() && (
                 <div>
-                  {classData.meeting_number ? (
+                  {ended ? (
+                    <p className="text-sm font-medium text-gray-600 bg-gray-50 border border-gray-200 rounded-xl px-4 py-4 text-center" role="status">
+                      Class Finished
+                    </p>
+                  ) : classData.meeting_number ? (
                     <>
                       <button
                         type="button"
@@ -639,7 +663,7 @@ function ClassDetailsContent({ classId }: { classId: string }) {
                         {joiningClass ? "Joining..." : "Join Class"}
                       </button>
                       <p className="text-sm text-gray-500 text-center mt-2">
-                        {classData.students.length} students enrolled
+                        {classData.students?.length || 0} students enrolled
                       </p>
                     </>
                   ) : (

@@ -11,6 +11,7 @@ import { getUserId as resolveUserId } from '@/lib/userId';
 import { Check, Crown, Sparkles } from 'lucide-react';
 import EmptyState from '@/components/EmptyState';
 import { formatDisplayDate } from '@/lib/formatDisplayDate';
+import { getLaunchDisplayMemberCap, isLaunchPlan } from '@/lib/launchPlan';
 
 /**
  * Reads user id from the auth cookie.
@@ -93,6 +94,8 @@ export default function MembershipPage() {
     const activePlanId = activeMembership?.planId?._id ?? (activeMembership?.planId as { id?: string } | undefined)?.id;
     const isActive = !!(activePlanId && activePlanId === planId);
     const isTrial = isTrialPlan(plan);
+    const launch = isLaunchPlan(plan);
+    const memberCap = getLaunchDisplayMemberCap(plan);
 
     return (
       <div
@@ -112,6 +115,11 @@ export default function MembershipPage() {
             {isTrial ? <Sparkles className="w-4 h-4 text-white/90" aria-hidden /> : <Crown className="w-4 h-4 text-white/90" aria-hidden />}
             <h3 className="text-lg font-semibold text-white text-center uppercase tracking-wide">{plan.name}</h3>
           </div>
+          {launch ? (
+            <p className="mt-2 text-center text-[11px] font-semibold uppercase tracking-wide text-white/90">
+              {memberCap} members · 1 year · till 31 Oct 2026
+            </p>
+          ) : null}
         </div>
 
         <div className="bg-[#fff4ef] px-4 py-5 flex items-baseline justify-center gap-1">

@@ -93,7 +93,8 @@ export function buildClassicAttendeeJoinUrl(
 
 /**
  * True when this Samsara actor should join Zoom as host (Meeting SDK + ZAK).
- * Hard rule: role `user` is never host (matches intended mobile behavior).
+ * Host only when explicitly requested (asHost / Zoom role 1). Teachers joining
+ * another teacher's class are attendees. Students never host.
  * @param flags - Payload flags from navigation
  * @param profileRole - Live /users/profile role
  */
@@ -105,17 +106,9 @@ export function shouldJoinAsZoomHost(
     flags.userRole || flags.appRole || profileRole || ""
   ).toLowerCase();
 
-  // Students never host — ignore payload.role=1
   if (userRole === "user") return false;
 
-  if (flags.asHost === true || Number(flags.role) === 1) return true;
-
-  return (
-    userRole === "teacher" ||
-    userRole === "trainer" ||
-    userRole === "admin" ||
-    userRole === "company"
-  );
+  return flags.asHost === true || Number(flags.role) === 1;
 }
 
 /**

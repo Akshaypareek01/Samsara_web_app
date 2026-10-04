@@ -484,9 +484,20 @@ const TemperatureTracker: React.FC = () => {
                 {tempData.length > 0
                   ? `Last updated: ${new Date(
                       tempData[0].measurementDate
-                    ).toLocaleDateString()} - ${new Date(
-                      tempData[0].measurementDate
-                    ).toLocaleTimeString()}`
+                    ).toLocaleDateString()}${
+                      new Date(tempData[0].measurementDate).getUTCHours() ===
+                        0 &&
+                      new Date(tempData[0].measurementDate).getUTCMinutes() ===
+                        0
+                        ? ""
+                        : ` - ${new Date(
+                            tempData[0].measurementDate
+                          ).toLocaleTimeString("en-US", {
+                            hour: "numeric",
+                            minute: "2-digit",
+                            hour12: true,
+                          })}`
+                    }`
                   : "No recent readings"}
               </p>
             </div>
@@ -653,9 +664,17 @@ const TemperatureTracker: React.FC = () => {
                           ? "Yesterday"
                           : date.toLocaleDateString()}
                       </div>
-                      <div className="text-xs text-gray-500">
-                        {date.toLocaleTimeString()}
-                      </div>
+                      {date.getUTCHours() === 0 &&
+                      date.getUTCMinutes() === 0 &&
+                      date.getUTCSeconds() === 0 ? null : (
+                        <div className="text-xs text-gray-500">
+                          {date.toLocaleTimeString("en-US", {
+                            hour: "numeric",
+                            minute: "2-digit",
+                            hour12: true,
+                          })}
+                        </div>
+                      )}
                     </div>
                     <div className="text-right">
                       <div className="text-sm font-bold text-gray-800">

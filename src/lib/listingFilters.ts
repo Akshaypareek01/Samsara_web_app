@@ -14,14 +14,28 @@ export function toLocalDateKey(date: Date): string {
 }
 
 /**
- * Parses an ISO/date string to a local YYYY-MM-DD key, or null.
- * @param raw - Date string from API
+ * Asia/Kolkata calendar day (YYYY-MM-DD).
+ * Date-only strings stay literal. Instants use Asia/Kolkata so UTC midnight
+ * does not move an event onto the next day.
+ * @param raw - Date string from API, or an ISO instant
  */
 export function parseLocalDateKey(raw: string | undefined | null): string | null {
   if (!raw) return null;
-  const date = new Date(raw);
+  const trimmed = String(raw).trim();
+  const isoDay = trimmed.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (isoDay) return `${isoDay[1]}-${isoDay[2]}-${isoDay[3]}`;
+  const us = trimmed.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (us) {
+    return `${us[3]}-${us[1].padStart(2, "0")}-${us[2].padStart(2, "0")}`;
+  }
+  const date = new Date(trimmed);
   if (Number.isNaN(date.getTime())) return null;
-  return toLocalDateKey(date);
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Kolkata",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(date);
 }
 
 /**
@@ -66,12 +80,13 @@ export function matchesDayChip(
   const key = parseLocalDateKey(raw);
   if (chip === "This Week") return isInThisWeek(raw, now);
   if (!key) return false;
-  const today = toLocalDateKey(now);
+  const today = parseLocalDateKey(now.toISOString());
   if (chip === "Today") return key === today;
   if (chip === "Tomorrow") {
-    const tomorrow = new Date(now);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    return key === toLocalDateKey(tomorrow);
+    if (!today) return false;
+    const [y, m, d] = today.split("-").map(Number);
+    const tomorrow = new Date(Date.UTC(y, m - 1, d + 1)).toISOString().slice(0, 10);
+    return key === tomorrow;
   }
   return true;
 }
@@ -111,9 +126,8 @@ export function parseClockToHM(raw?: string | null): ClockHM | null {
 }
 
 /**
- * True when a class/event is still upcoming: start day is today or later,
- * and if today has an end time, that time has not already passed.
- * Matches mobile Home / Classes finished-vs-upcoming cutoff.
+ * True when a class/event is still upcoming: Kolkata start day is today or later,
+ * and if that day is today and an end time is set, that clock has not passed.
  *
  * @param startRaw - ISO start/schedule date
  * @param endTime - Optional end clock (events)
@@ -124,18 +138,15 @@ export function isUpcomingListing(
   endTime?: string | null,
   now = new Date(),
 ): boolean {
-  if (!startRaw) return false;
-  const start = new Date(startRaw);
-  if (Number.isNaN(start.getTime())) return false;
-
-  const startDay = new Date(start.getFullYear(), start.getMonth(), start.getDate());
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  if (startDay > today) return true;
-  if (startDay < today) return false;
+  const startKey = parseLocalDateKey(startRaw);
+  const todayKey = parseLocalDateKey(now.toISOString());
+  if (!startKey || !todayKey) return false;
+  if (startKey > todayKey) return true;
+  if (startKey < todayKey) return false;
 
   const endHM = parseClockToHM(endTime);
   if (!endHM) return true;
-  const endDt = new Date(today);
+  const endDt = new Date(now);
   endDt.setHours(endHM.hours, endHM.minutes, 0, 0);
   return now <= endDt;
 }

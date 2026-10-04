@@ -10,6 +10,8 @@ type HostActionPanelProps = {
   ending?: boolean;
   /** Show Start when no meeting (classes). Events omit Start. */
   showStart?: boolean;
+  /** Scheduled end has passed — hide Start and Join. */
+  ended?: boolean;
   onStart?: () => void;
   onJoinAsHost: () => void;
   onEnd?: () => void;
@@ -26,6 +28,7 @@ export default function HostActionPanel({
   joining = false,
   ending = false,
   showStart = false,
+  ended = false,
   onStart,
   onJoinAsHost,
   onEnd,
@@ -50,23 +53,34 @@ export default function HostActionPanel({
         </div>
         <span
           className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold ${
-            hasMeeting
+            ended
+              ? "bg-gray-200 text-gray-700"
+              : hasMeeting
               ? "bg-emerald-100 text-emerald-700"
               : "bg-gray-100 text-gray-600"
           }`}
         >
           <span
             className={`w-1.5 h-1.5 rounded-full ${
-              hasMeeting ? "bg-emerald-500" : "bg-gray-400"
+              ended ? "bg-gray-500" : hasMeeting ? "bg-emerald-500" : "bg-gray-400"
             }`}
             aria-hidden
           />
-          {hasMeeting ? "Live meeting ready" : "Not started"}
+          {ended ? "Finished" : hasMeeting ? "Live meeting ready" : "Not started"}
         </span>
       </div>
 
       <div className="p-5 space-y-2.5">
-        {!hasMeeting && showStart && onStart ? (
+        {ended ? (
+          <p
+            className="text-sm font-medium text-gray-600 bg-gray-50 rounded-xl px-4 py-3 border border-gray-200"
+            role="status"
+          >
+            This class has ended.
+          </p>
+        ) : null}
+
+        {!ended && !hasMeeting && showStart && onStart ? (
           <button
             type="button"
             onClick={onStart}
@@ -78,7 +92,7 @@ export default function HostActionPanel({
           </button>
         ) : null}
 
-        {hasMeeting ? (
+        {!ended && hasMeeting ? (
           <>
             <button
               type="button"
@@ -101,7 +115,7 @@ export default function HostActionPanel({
               </button>
             ) : null}
           </>
-        ) : !showStart ? (
+        ) : !ended && !showStart ? (
           <p className="text-sm text-gray-600 bg-[#fff4ef]/60 rounded-xl px-4 py-3 border border-[#ffe0d0]">
             Meeting not started yet. Host join will appear once the live meeting
             is available.

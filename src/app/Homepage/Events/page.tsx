@@ -17,6 +17,7 @@ import ListingFilterBar from "@/components/ListingFilterBar";
 import SectionHeader from "@/components/SectionHeader";
 import EventListingCard, { ListingEvent } from "./components/EventListingCard";
 import { formatDisplayDate } from "@/lib/formatDisplayDate";
+import { isViewerRegistered } from "@/lib/eventRegistration";
 
 type Event = ListingEvent & {
   details: string;
@@ -54,6 +55,7 @@ export default function EventsPage() {
     email?: string;
   } | null>(null);
   const [joiningEvent, setJoiningEvent] = useState<string | null>(null);
+  const [notice, setNotice] = useState("");
   const [userProfile, setUserProfile] = useState<{
     name?: string;
     email?: string;
@@ -206,9 +208,19 @@ export default function EventsPage() {
   };
 
   /**
-   * Navigates to event booking page.
+   * Opens booking unless this user is already on the roster.
+   * @param id - Event id
    */
   const handleBook = (id: string) => {
+    const event = events.find((item) => item._id === id);
+    const already =
+      isViewerRegistered(event?.students, userId) ||
+      userEvents.some((item) => item._id === id);
+    if (already) {
+      setNotice("You are already registered for this event.");
+      return;
+    }
+    setNotice("");
     router.push(`/Homepage/Events/book?eventId=${id}`);
   };
 
@@ -257,6 +269,10 @@ export default function EventsPage() {
         event={event}
         onBook={handleBook}
         isOwn={isOwnResource(cookieUser, event.teacher)}
+        isRegistered={
+          isViewerRegistered(event.students, userId) ||
+          userEvents.some((item) => item._id === event._id)
+        }
       />
     ));
   };
@@ -282,6 +298,15 @@ export default function EventsPage() {
             </span>
           </div>
         </div>
+
+        {notice ? (
+          <p
+            role="alert"
+            className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800"
+          >
+            {notice}
+          </p>
+        ) : null}
 
         <ListingFilterBar
           searchValue={searchQuery}
